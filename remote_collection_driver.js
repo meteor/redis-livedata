@@ -49,26 +49,18 @@ _.extend(RedisInternals.RemoteCollectionDriver.prototype, {
 // only require Mongo configuration if it's actually used (eg, not if
 // you're only trying to receive data from a remote DDP server.)
 RedisInternals.defaultRemoteCollectionDriver = _.once(function () {
-  var redisUrl;
+  var redisUrl = process.env.REDIS_URL;
+
   var connectionOptions = {};
+  var configureKeyspaceNotifications = process.env.REDIS_CONFIGURE_KEYSPACE_NOTIFICATIONS;
+  if (configureKeyspaceNotifications) {
+    connectionOptions.configureKeyspaceNotifications = configureKeyspaceNotifications;
+  }
 
-  AppConfig.configurePackage("redis-livedata", function (config) {
-    // This will keep running if redis gets reconfigured.  That's not ideal, but
-    // should be ok for now.
-    redisUrl = config.url;
-
-    if (config.oplog)
-      connectionOptions.oplogUrl = config.oplog;
-
-    if (config.configure_keyspace_notifications) {
-      connectionOptions.configureKeyspaceNotifications = config.configure_keyspace_notifications;
-    }
-  });
-
-  // XXX bad error since it could also be set directly in METEOR_DEPLOY_CONFIG
-  if (! redisUrl)
-    throw new Error("REDIS_URL must be set in environment");
-
+  if (! redisUrl) {
+    redisUrl = 'redis://127.0.0.1:6379';
+    Meteor._debug("Defaulting REDIS_URL to " + redisUrl);
+  }
 
   return new RedisInternals.RemoteCollectionDriver(redisUrl, connectionOptions);
 });
