@@ -302,7 +302,7 @@ function checkConfig(client, fix) {
       // Sanity check!
       checkConfig(client, false);
     } else {
-      throw new Error("You must configure notify-keyspace-events for Meteor.  Current config=" + config + " missing=" + missing);
+      throw new Error("You must configure notify-keyspace-events for Meteor (or launch with REDIS_CONFIGURE_KEYSPACE_NOTIFICATIONS=1).  Current config=" + config + " missing=" + missing);
     }
   }
 };
