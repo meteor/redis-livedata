@@ -158,7 +158,7 @@ Meteor.RedisCollection = function (name, options) {
   if (Package.autopublish && !options._preventAutopublish && self._connection
       && self._connection.publish) {
     self._connection.publish(null, function () {
-      return self.find();
+      return self.matching('*');
     }, {is_auto: true});
   }
 
