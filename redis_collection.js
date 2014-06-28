@@ -698,14 +698,14 @@ Meteor.RedisCollection.prototype._defineMutationMethods = function() {
 
         if (self._restricted) {
           // short circuit if there is no way it will pass.
-          if (self._validators[method].allow.length === 0) {
+          if (self._validators.exec.allow.length === 0) {
             throw new Meteor.Error(
               403, "Access denied. No allow validators set on restricted " +
                 "Redis store.");
           }
 
           var validatedMethodName = '_validatedExec';
-          return self[validatedMethodName].call(self, userId, method, args);
+          return self[validatedMethodName].call(self, this.userId, method, args);
         } else if (self._isInsecure()) {
           // In insecure mode, allow any mutation.
           return self._collection[method].apply(self._collection, args);
