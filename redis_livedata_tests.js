@@ -199,9 +199,12 @@ if (Meteor.isServer) {
 // Parameterize tests.
 var idGeneration = 'STRING';
 //_.each( ['STRING', 'MONGO'], function(idGeneration) {
+_.each( [false, true], function(anonymous) {
 
 //var collectionOptions = { idGeneration: idGeneration};
 var collectionOptions = { };
+var nameSuffix = idGeneration + ", " + (anonymous ? "anonymous" : "");
+var redisCollectionName = anonymous ? null : "redis";
 
 //testAsyncMulti("redis-livedata - database error reporting. " + idGeneration, [
 //  function (test, expect) {
@@ -242,14 +245,14 @@ var collectionOptions = { };
 //  }
 //]);
 
-ObserveTester = function (collection, keyPrefix) {
+ObserveTester = function (collection, keyPrefix, redisCollectionName) {
   var self = this;
 
   self._keyPrefix = keyPrefix;
   self._log = '';
 
   if (Meteor.isClient) {
-    Meteor.call("createInsecureRedisCollection", "redis");
+    Meteor.call("createInsecureRedisCollection", redisCollectionName);
   }
 
   self._collection = collection;
@@ -311,11 +314,11 @@ ObserveTester.prototype.expectObserve = function (test, expected, f) {
   test.include(expected, self.captureObserve(f));
 };
 
-Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, onComplete) {
+Tinytest.addAsync("redis-livedata - basics, " + nameSuffix, function (test, onComplete) {
   var keyPrefix = Random.id() + ':';
-  var coll = new Meteor.RedisCollection("redis", collectionOptions);
+  var coll = new Meteor.RedisCollection(redisCollectionName, collectionOptions);
 
-  var obs = new ObserveTester(coll, keyPrefix);
+  var obs = new ObserveTester(coll, keyPrefix, redisCollectionName);
 
   test.equal(coll.matching(keyPrefix + '*').count(), 0);
   test.equal(coll.get(keyPrefix + "abc"), undefined);
@@ -438,10 +441,10 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
   onComplete();
 });
 
-testAsyncMulti('redis-livedata - observe initial results, ' + idGeneration, [
+testAsyncMulti('redis-livedata - observe initial results, ' + nameSuffix, [
   function (test, expect) {
     this.keyPrefix = Random.id();
-    this.collectionName = "redis";
+    this.collectionName = redisCollectionName;
     if (Meteor.isClient) {
       Meteor.call('createInsecureRedisCollection', this.collectionName);
       Meteor.subscribe('c-' + this.collectionName, expect());
@@ -485,10 +488,10 @@ testAsyncMulti('redis-livedata - observe initial results, ' + idGeneration, [
   }
 ]);
 
-testAsyncMulti('redis-livedata - simple insertion, ' + idGeneration, [
+testAsyncMulti('redis-livedata - simple insertion, ' + nameSuffix, [
   function (test, expect) {
     this.keyPrefix = Random.id();
-    this.collectionName = "redis";
+    this.collectionName = redisCollectionName;
     if (Meteor.isClient) {
       Meteor.call('createInsecureRedisCollection', this.collectionName);
       Meteor.subscribe('c-' + this.collectionName, expect());
@@ -515,7 +518,7 @@ testAsyncMulti('redis-livedata - simple insertion, ' + idGeneration, [
 // XXX: flushall doesn't post keyspace notifications
 //Tinytest.addAsync('redis-livedata - flushall, ' + idGeneration, function (test, onComplete) {
 //  var keyPrefix = Random.id() + ':';
-//  var coll = new Meteor.RedisCollection("redis", collectionOptions);
+//  var coll = new Meteor.RedisCollection(redisCollectionName, collectionOptions);
 //
 //  var obs = new ObserveTester(coll, keyPrefix);
 //
@@ -539,12 +542,12 @@ testAsyncMulti('redis-livedata - simple insertion, ' + idGeneration, [
 //  onComplete();
 //});
 
-testAsyncMulti('redis-livedata - setex, ' + idGeneration, [
+testAsyncMulti('redis-livedata - setex, ' + nameSuffix, [
   function (test, expect) {
     var keyPrefix = test._keyPrefix = Random.id() + ':';
-    var coll = test._coll = new Meteor.RedisCollection("redis", collectionOptions);
+    var coll = test._coll = new Meteor.RedisCollection(redisCollectionName, collectionOptions);
 
-    var obs = test._obs = new ObserveTester(coll, keyPrefix);
+    var obs = test._obs = new ObserveTester(coll, keyPrefix, redisCollectionName);
 
     test.equal(coll.matching(keyPrefix + '*').count(), 0);
     test.equal(coll.get(keyPrefix + "1"), undefined);
@@ -565,12 +568,12 @@ testAsyncMulti('redis-livedata - setex, ' + idGeneration, [
   }
 ]);
 
-testAsyncMulti('redis-livedata - repeated set, ' + idGeneration, [
+testAsyncMulti('redis-livedata - repeated set, ' + nameSuffix, [
   function (test, expect) {
     var keyPrefix = test._keyPrefix = Random.id() + ':';
-    var coll = test._coll = new Meteor.RedisCollection("redis", collectionOptions);
+    var coll = test._coll = new Meteor.RedisCollection(redisCollectionName, collectionOptions);
 
-    var obs = test._obs = new ObserveTester(coll, keyPrefix);
+    var obs = test._obs = new ObserveTester(coll, keyPrefix, redisCollectionName);
 
     obs.expectObserve(test, 'a(counter)', function () {
       coll.set(keyPrefix + 'counter', 1);
@@ -590,12 +593,12 @@ testAsyncMulti('redis-livedata - repeated set, ' + idGeneration, [
   }
 ]);
 
-testAsyncMulti('redis-livedata - incr / decr, ' + idGeneration, [
+testAsyncMulti('redis-livedata - incr / decr, ' + nameSuffix, [
   function (test, expect) {
     var keyPrefix = test._keyPrefix = Random.id() + ':';
-    var coll = test._coll = new Meteor.RedisCollection("redis", collectionOptions);
+    var coll = test._coll = new Meteor.RedisCollection(redisCollectionName, collectionOptions);
 
-    var obs = test._obs = new ObserveTester(coll, keyPrefix);
+    var obs = test._obs = new ObserveTester(coll, keyPrefix, redisCollectionName);
 
     obs.expectObserve(test, 'a(counter)', function () {
       coll.incrby(keyPrefix + 'counter', 2);
@@ -626,12 +629,12 @@ testAsyncMulti('redis-livedata - incr / decr, ' + idGeneration, [
 ]);
 
 
-testAsyncMulti('redis-livedata - append, ' + idGeneration, [
+testAsyncMulti('redis-livedata - append, ' + nameSuffix, [
   function (test, expect) {
     var keyPrefix = test._keyPrefix = Random.id() + ':';
-    var coll = test._coll = new Meteor.RedisCollection("redis", collectionOptions);
+    var coll = test._coll = new Meteor.RedisCollection(redisCollectionName, collectionOptions);
 
-    var obs = test._obs = new ObserveTester(coll, keyPrefix);
+    var obs = test._obs = new ObserveTester(coll, keyPrefix, redisCollectionName);
 
     obs.expectObserve(test, 'a(easyas)', function () {
       coll.append(keyPrefix + 'easyas', '1');
@@ -822,7 +825,7 @@ testAsyncMulti('redis-livedata - append, ' + idGeneration, [
 //  onComplete();
 //});
 //
-Tinytest.addAsync("redis-livedata - stop handle in callback, " + idGeneration, function (test, onComplete) {
+Tinytest.addAsync("redis-livedata - stop handle in callback, " + nameSuffix, function (test, onComplete) {
   var keyPrefix = Random.id();
   var coll;
   if (Meteor.isClient) {
@@ -1007,11 +1010,11 @@ if (Meteor.isServer) {
 //    onComplete();
 //  });
 //
-  Tinytest.addAsync("redis-livedata - async server-side insert, " + idGeneration, function (test, onComplete) {
+  Tinytest.addAsync("redis-livedata - async server-side insert, " + nameSuffix, function (test, onComplete) {
     // Tests that set returns before the callback runs. Relies on the fact
     // that redis does not run the callback before spinning off the event loop.
     var key = Random.id();
-    var coll = new Meteor.RedisCollection("redis");
+    var coll = new Meteor.RedisCollection(redisCollectionName);
     var docId = key;
     var x = 0;
     coll.set(key, "42", function (err, result) {
@@ -1022,10 +1025,10 @@ if (Meteor.isServer) {
     x++;
   });
 
-  Tinytest.addAsync("redis-livedata - async server-side update, " + idGeneration, function (test, onComplete) {
+  Tinytest.addAsync("redis-livedata - async server-side update, " + nameSuffix, function (test, onComplete) {
     // Tests that update returns before the callback runs.
     var key = Random.id();
-    var coll = new Meteor.RedisCollection("redis");
+    var coll = new Meteor.RedisCollection(redisCollectionName);
     var x = 0;
     coll.set(key, "33");
     coll.set(key, "22", function (err, result) {
@@ -1038,10 +1041,10 @@ if (Meteor.isServer) {
   });
 
 // XXX this test is ported to Redis but is hanging. Debug later.
-  Tinytest.addAsync("redis-livedata - async server-side remove, " + idGeneration, function (test, onComplete) {
+  Tinytest.addAsync("redis-livedata - async server-side remove, " + nameSuffix, function (test, onComplete) {
     // Tests that remove returns before the callback runs.
     var key = Random.id();
-    var coll = new Meteor.RedisCollection("redis");
+    var coll = new Meteor.RedisCollection(redisCollectionName);
     var x = 0;
     coll.set(key, "123");
     coll.del(key, function (err, result) {
@@ -2227,13 +2230,13 @@ if (Meteor.isServer) {
 //});
 //
 if (Meteor.isClient) {
-  Tinytest.addAsync("redis-livedata - async set/del return values over network " + idGeneration, function (test, onComplete) {
+  Tinytest.addAsync("redis-livedata - async set/del return values over network " + nameSuffix, function (test, onComplete) {
     var coll;
     var run = test.runId();
-    var collName = "redis";
+    var collName = redisCollectionName;
     var subName = "c" + run;
     coll = new Meteor.RedisCollection(collName, collectionOptions);
-    Meteor.call("createInsecureRedisCollection", "redis");
+    Meteor.call("createInsecureRedisCollection", redisCollectionName);
     Meteor.subscribe("c-" + collName, function () {
       coll.set(run + "foo", "f");
       coll.set(run + "bar", "b");
@@ -2808,8 +2811,8 @@ if (Meteor.isServer) {
 //  ]);
 }
 
-Tinytest.addAsync("redis-livedata - local collections with different connections", function (test, onComplete) {
-  var coll1 = new Meteor.RedisCollection("redis");
+Tinytest.addAsync("redis-livedata - local collections with different connections, " + nameSuffix, function (test, onComplete) {
+  var coll1 = new Meteor.RedisCollection(redisCollectionName);
   var coll2 = new Meteor.RedisCollection(Random.id(), { connection: null });
   var key = Random.id();
   coll2.set(key, key, function (err, status) {
@@ -2819,7 +2822,7 @@ Tinytest.addAsync("redis-livedata - local collections with different connections
   });
 });
 
-Tinytest.addAsync("redis-livedata - local collection with null connection, w/ callback", function (test, onComplete) {
+Tinytest.addAsync("redis-livedata - local collection with null connection, w/ callback, " + nameSuffix, function (test, onComplete) {
   var cname = Random.id();
   var coll1 = new Meteor.RedisCollection(cname, { connection: null });
   var id = Random.id();
@@ -2831,7 +2834,7 @@ Tinytest.addAsync("redis-livedata - local collection with null connection, w/ ca
   });
 });
 
-Tinytest.addAsync("redis-livedata - local collection with null connection, w/o callback", function (test, onComplete) {
+Tinytest.addAsync("redis-livedata - local collection with null connection, w/o callback" + nameSuffix, function (test, onComplete) {
   var cname = Random.id();
   var coll1 = new Meteor.RedisCollection(cname, { connection: null });
   var id = Random.id();
@@ -3243,3 +3246,5 @@ Tinytest.addAsync("redis-livedata - local collection with null connection, w/o c
 //    test.equal(result, self.doc);
 //  }
 //]);
+
+});
