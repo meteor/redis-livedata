@@ -1,5 +1,4 @@
-RedisSingletons = {};
-RedisSingletons._collections = {};
+RedisSingletons = new SynchronousMap();
 
 // options.connection, if given, is a LivedataClient or LivedataServer
 // XXX presently there is no way to destroy/clean up a Collection
@@ -21,10 +20,19 @@ Meteor.RedisCollection = function (name, options) {
   }
 
   if (name !== null) {
-    if (_.has(RedisSingletons._collections, name)) {
-      return RedisSingletons._collections[name];
-    }
+    return RedisSingletons.get([name], function () {
+      self._factory(name, options);
+      return self;
+    });
+  } else {
+    self._factory();
+    return self;
   }
+};
+
+Meteor.RedisCollection.prototype._factory = function (name, options) {
+  var self = this;
+
   options = _.extend({
     connection: undefined,
 //    idGeneration: 'STRING',
@@ -160,10 +168,6 @@ Meteor.RedisCollection = function (name, options) {
     self._connection.publish(null, function () {
       return self.matching('*');
     }, {is_auto: true});
-  }
-
-  if (name) {
-    RedisSingletons._collections[name] = self;
   }
 };
 
