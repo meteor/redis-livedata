@@ -834,7 +834,7 @@ Tinytest.addAsync("redis-livedata - stop handle in callback, " + nameSuffix, fun
   if (Meteor.isClient) {
     coll = new Meteor.RedisCollection(null, collectionOptions); // local, unmanaged
   } else {
-    coll = new Meteor.RedisCollection("redis-", collectionOptions);
+    coll = new Meteor.RedisCollection("redis", collectionOptions);
   }
 
   var output = [];
