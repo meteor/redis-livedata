@@ -445,7 +445,7 @@ testAsyncMulti('redis-livedata - observe initial results, ' + nameSuffix, [
   function (test, expect) {
     this.keyPrefix = Random.id();
     this.collectionName = redisCollectionName;
-    if (Meteor.isClient) {
+    if (Meteor.isClient && !anonymous) {
       Meteor.call('createInsecureRedisCollection', this.collectionName);
       Meteor.subscribe('c-' + this.collectionName, expect());
     }
@@ -492,7 +492,7 @@ testAsyncMulti('redis-livedata - simple insertion, ' + nameSuffix, [
   function (test, expect) {
     this.keyPrefix = Random.id();
     this.collectionName = redisCollectionName;
-    if (Meteor.isClient) {
+    if (Meteor.isClient && !anonymous) {
       Meteor.call('createInsecureRedisCollection', this.collectionName);
       Meteor.subscribe('c-' + this.collectionName, expect());
     }
@@ -2232,7 +2232,7 @@ if (Meteor.isServer) {
 //  });
 //});
 //
-if (Meteor.isClient) {
+if (Meteor.isClient && !anonymous) {
   Tinytest.addAsync("redis-livedata - async set/del return values over network " + nameSuffix, function (test, onComplete) {
     var coll;
     var run = test.runId();
