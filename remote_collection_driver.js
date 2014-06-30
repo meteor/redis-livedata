@@ -45,10 +45,35 @@ _.extend(RedisInternals.RemoteCollectionDriver.prototype, {
 });
 
 
+// A version of _.once that behaves sensibly under exceptions
+// If the first call is an exception:
+//  _.once will return undefined on subsequent calls
+//  meteorOnce will rethrow the exception every time
+meteorOnce = function(func) {
+    var ran = false, memo, error;
+    return function() {
+      if (!ran) {
+        try {
+          memo = func.apply(this, arguments);
+          ran = true;
+        } catch (e) {
+          error = e;
+          ran = true;
+        }
+        func = null;
+      }
+      if (error) {
+        throw error;
+      } else {
+        return memo;
+      }
+    };
+  };
+
 // Create the singleton RemoteCollectionDriver only on demand, so we
 // only require Mongo configuration if it's actually used (eg, not if
 // you're only trying to receive data from a remote DDP server.)
-RedisInternals.defaultRemoteCollectionDriver = _.once(function () {
+RedisInternals.defaultRemoteCollectionDriver = meteorOnce(function () {
   var redisUrl = process.env.REDIS_URL;
 
   var connectionOptions = {};
