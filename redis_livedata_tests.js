@@ -542,31 +542,34 @@ testAsyncMulti('redis-livedata - simple insertion, ' + nameSuffix, [
 //  onComplete();
 //});
 
-testAsyncMulti('redis-livedata - setex, ' + nameSuffix, [
-  function (test, expect) {
-    var keyPrefix = test._keyPrefix = Random.id() + ':';
-    var coll = test._coll = new Meteor.RedisCollection(redisCollectionName, collectionOptions);
+// Key expiration is entirely server-driven, so doesn't work for anonymous collections
+if (!anonymous) {
+  testAsyncMulti('redis-livedata - setex, ' + nameSuffix, [
+    function (test, expect) {
+      var keyPrefix = test._keyPrefix = Random.id() + ':';
+      var coll = test._coll = new Meteor.RedisCollection(redisCollectionName, collectionOptions);
 
-    var obs = test._obs = new ObserveTester(coll, keyPrefix, redisCollectionName);
+      var obs = test._obs = new ObserveTester(coll, keyPrefix, redisCollectionName);
 
-    test.equal(coll.matching(keyPrefix + '*').count(), 0);
-    test.equal(coll.get(keyPrefix + "1"), undefined);
+      test.equal(coll.matching(keyPrefix + '*').count(), 0);
+      test.equal(coll.get(keyPrefix + "1"), undefined);
 
-    obs.expectObserve(test, 'a(1)', function () {
-      coll.setex(keyPrefix + '1', 1, '1');
-    });
+      obs.expectObserve(test, 'a(1)', function () {
+        coll.setex(keyPrefix + '1', 1, '1');
+      });
 
-    // Wait for the key to timeout.
-    Meteor.setTimeout(expect(), 2000);
-  }, function (test, expect) {
-    var keyPrefix = test._keyPrefix;
-    var obs = test._obs;
-    var coll = test._coll;
-    obs.expectObserve(test, 'r(1)', function () {
-      test.equal(coll.get(keyPrefix + '1'), undefined);
-    });
-  }
-]);
+      // Wait for the key to timeout.
+      Meteor.setTimeout(expect(), 2000);
+    }, function (test, expect) {
+      var keyPrefix = test._keyPrefix;
+      var obs = test._obs;
+      var coll = test._coll;
+      obs.expectObserve(test, 'r(1)', function () {
+        test.equal(coll.get(keyPrefix + '1'), undefined);
+      });
+    }
+  ]);
+}
 
 testAsyncMulti('redis-livedata - repeated set, ' + nameSuffix, [
   function (test, expect) {
