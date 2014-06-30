@@ -1,36 +1,51 @@
-// This is a magic collection that fails its writes on the server when
-// the selector (or inserted document) contains fail: true.
-
-var TRANSFORMS = {};
-
-// We keep track of the collections, so we can refer to them by name
-var COLLECTIONS = {};
-
+// This is a special method that creates the redis collection over but publish a
+// different subset with different allow/deny rules
 if (Meteor.isServer) {
+  var COLLECTIONS = {};
   Meteor.methods({
-    createInsecureRedisCollection: function (name, options) {
-      check(name, String);
-      check(options, Match.Optional({
-        transformName: Match.Optional(String),
-        idGeneration: Match.Optional(String)
-      }));
+    prefixRedisCollection: function (prefix, creationOptions) {
+      creationOptions = creationOptions || {};
 
-      var keyPrefix = '*';
+      check(prefix, String);
+      check(creationOptions, {
+        insecure: Match.Optional(Boolean)
+      });
 
-      if (options && options.transformName) {
-        options.transform = TRANSFORMS[options.transformName];
-      }
-      var c = new Meteor.RedisCollection(name, options);
-      COLLECTIONS[name] = c;
-      c._insecure = true;
-      Meteor.publish('c-' + name, function () {
-        var cursor = c.matching(keyPrefix);
+      var c = new Meteor.RedisCollection("redis");
+
+      Meteor.publish('c-' + prefix, function () {
+        var cursor = c.matching(prefix + "*");
         return cursor;
       });
+
+      if (creationOptions.insecure) {
+        c.allow({ exec: function (userId, command, args) {
+          if (args[0].substr(0, prefix.length) === prefix)
+            return true;
+          return false;
+        } });
+      }
+
+      COLLECTIONS[prefix] = c;
+    },
+    // call the passed allow and deny functions only in case the key is
+    // matching the prefix
+    addAllowRule: function (prefix, allowFn) {
+      COLLECTIONS[prefix].allow({ exec: function (userId, command, args) {
+        if (args[0].substr(0, prefix.length) === prefix)
+          return allowFn.apply(this, arguments);
+        return false;
+      } });
+    },
+    addDenyRule: function (prefix, denyFn) {
+      COLLECTIONS[prefix].deny({ exec: function (userId, command, args) {
+        if (args[0].substr(0, prefix.length) === prefix)
+          return denyFn.apply(this, arguments);
+        return false;
+      } });
     },
     dropInsecureRedisCollection: function(name) {
-      var c = COLLECTIONS[name];
-      c._dropCollection();
+      throw new Error("Not implemented");
     }
   });
 }
@@ -251,10 +266,6 @@ ObserveTester = function (collection, keyPrefix, redisCollectionName) {
   self._keyPrefix = keyPrefix;
   self._log = '';
 
-  if (Meteor.isClient) {
-    Meteor.call("createInsecureRedisCollection", redisCollectionName);
-  }
-
   self._collection = collection;
 
   var obs = collection.matching(keyPrefix + '*').observeChanges({
@@ -317,6 +328,10 @@ ObserveTester.prototype.expectObserve = function (test, expected, f) {
 Tinytest.addAsync("redis-livedata - basics, " + nameSuffix, function (test, onComplete) {
   var keyPrefix = Random.id() + ':';
   var coll = new Meteor.RedisCollection(redisCollectionName, collectionOptions);
+
+  if (Meteor.isClient) {
+    Meteor.call("prefixRedisCollection", keyPrefix, { insecure: true });
+  }
 
   var obs = new ObserveTester(coll, keyPrefix, redisCollectionName);
 
@@ -446,8 +461,8 @@ testAsyncMulti('redis-livedata - observe initial results, ' + nameSuffix, [
     this.keyPrefix = Random.id();
     this.collectionName = redisCollectionName;
     if (Meteor.isClient && !anonymous) {
-      Meteor.call('createInsecureRedisCollection', this.collectionName);
-      Meteor.subscribe('c-' + this.collectionName, expect());
+      Meteor.call("prefixRedisCollection", this.keyPrefix, { insecure: true });
+      Meteor.subscribe('c-' + this.keyPrefix, expect());
     }
     this.coll = new Meteor.RedisCollection(this.collectionName, collectionOptions);
 
@@ -493,8 +508,8 @@ testAsyncMulti('redis-livedata - simple insertion, ' + nameSuffix, [
     this.keyPrefix = Random.id();
     this.collectionName = redisCollectionName;
     if (Meteor.isClient && !anonymous) {
-      Meteor.call('createInsecureRedisCollection', this.collectionName);
-      Meteor.subscribe('c-' + this.collectionName, expect());
+      Meteor.call("prefixRedisCollection", this.keyPrefix, { insecure: true });
+      Meteor.subscribe('c-' + this.keyPrefix, expect());
     }
   }, function (test, expect) {
     var coll = new Meteor.RedisCollection(this.collectionName, collectionOptions);
@@ -549,6 +564,10 @@ if (!anonymous) {
       var keyPrefix = test._keyPrefix = Random.id() + ':';
       var coll = test._coll = new Meteor.RedisCollection(redisCollectionName, collectionOptions);
 
+      if (Meteor.isClient) {
+        Meteor.call("prefixRedisCollection", keyPrefix, { insecure: true });
+      }
+
       var obs = test._obs = new ObserveTester(coll, keyPrefix, redisCollectionName);
 
       test.equal(coll.matching(keyPrefix + '*').count(), 0);
@@ -576,6 +595,10 @@ testAsyncMulti('redis-livedata - repeated set, ' + nameSuffix, [
     var keyPrefix = test._keyPrefix = Random.id() + ':';
     var coll = test._coll = new Meteor.RedisCollection(redisCollectionName, collectionOptions);
 
+    if (Meteor.isClient) {
+      Meteor.call("prefixRedisCollection", keyPrefix, { insecure: true });
+    }
+
     var obs = test._obs = new ObserveTester(coll, keyPrefix, redisCollectionName);
 
     obs.expectObserve(test, 'a(counter)', function () {
@@ -600,6 +623,10 @@ testAsyncMulti('redis-livedata - incr / decr, ' + nameSuffix, [
   function (test, expect) {
     var keyPrefix = test._keyPrefix = Random.id() + ':';
     var coll = test._coll = new Meteor.RedisCollection(redisCollectionName, collectionOptions);
+
+    if (Meteor.isClient) {
+      Meteor.call("prefixRedisCollection", keyPrefix, { insecure: true });
+    }
 
     var obs = test._obs = new ObserveTester(coll, keyPrefix, redisCollectionName);
 
@@ -637,6 +664,9 @@ testAsyncMulti('redis-livedata - append, ' + nameSuffix, [
     var keyPrefix = test._keyPrefix = Random.id() + ':';
     var coll = test._coll = new Meteor.RedisCollection(redisCollectionName, collectionOptions);
 
+    if (Meteor.isClient) {
+      Meteor.call("prefixRedisCollection", keyPrefix, { insecure: true });
+    }
     var obs = test._obs = new ObserveTester(coll, keyPrefix, redisCollectionName);
 
     obs.expectObserve(test, 'a(easyas)', function () {
@@ -2239,8 +2269,8 @@ if (Meteor.isClient && !anonymous) {
     var collName = redisCollectionName;
     var subName = "c" + run;
     coll = new Meteor.RedisCollection(collName, collectionOptions);
-    Meteor.call("createInsecureRedisCollection", redisCollectionName);
-    Meteor.subscribe("c-" + collName, function () {
+    Meteor.call('prefixRedisCollection', run, { insecure: true });
+    Meteor.subscribe("c-" + run, function () {
       coll.set(run + "foo", "f");
       coll.set(run + "bar", "b");
       coll.set(run + "foo", "foo", function (err, result) {
