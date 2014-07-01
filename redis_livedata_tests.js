@@ -8,12 +8,17 @@ if (Meteor.isServer) {
 
       check(prefix, String);
       check(creationOptions, {
-        insecure: Match.Optional(Boolean)
+        insecure: Match.Optional(Boolean),
+        publishName: Match.Optional(Match.OneOf(String, null))
       });
 
       var c = new Meteor.RedisCollection("redis");
 
-      Meteor.publish('c-' + prefix, function () {
+      var publishName = 'c-' + prefix;
+      if (_.has(creationOptions, 'publishName')) {
+        publishName = creationOptions.publishName;
+      }
+      Meteor.publish(publishName, function () {
         var cursor = c.matching(prefix + "*");
         return cursor;
       });
@@ -502,6 +507,59 @@ testAsyncMulti('redis-livedata - observe initial results, ' + nameSuffix, [
     });
   }
 ]);
+
+if (Meteor.isClient && !anonymous) {
+testAsyncMulti('redis-livedata - anonymous / universal publishes, ' + nameSuffix, [
+  function (test, expect) {
+    this.keyPrefix = Random.id();
+    this.collectionName = redisCollectionName;
+
+    if (Meteor.isClient && !anonymous) {
+      var options = { insecure: true };
+      // Publish universally
+      options.publishName = null;
+      Meteor.call("prefixRedisCollection", this.keyPrefix, options);
+      // Note: no Meteor.subscribe call here!
+    }
+    this.coll = new Meteor.RedisCollection(this.collectionName, collectionOptions);
+
+    var coll = this.coll;
+    var keyPrefix = this.keyPrefix;
+    coll.set(keyPrefix + '1', '1', expect(undefined, 'OK'));
+  }, function (test, expect) {
+    var coll = this.coll;
+    var keyPrefix = this.keyPrefix;
+
+    var output = [];
+
+    var handle = coll.matching(keyPrefix + '*').observeChanges({
+      added: function (key, value) {
+        output.push({added: key});
+      },
+      changed: function (key, value) {
+        output.push('updated');
+      },
+      removed: function (key, value) {
+        output.push('removed');
+      }
+    });
+
+    var finishObserve = function (f) {
+      if (Meteor.isClient) {
+        f();
+      } else {
+        var fence = new DDPServer._WriteFence;
+        DDPServer._CurrentWriteFence.withValue(fence, f);
+        fence.armAndWait();
+      }
+    };
+
+    finishObserve(function () {
+      test.equal(output, [{added: keyPrefix + '1'}]);
+    });
+  }
+]);
+}
 
 testAsyncMulti('redis-livedata - simple insertion, ' + nameSuffix, [
   function (test, expect) {
