@@ -35,14 +35,16 @@ if (Meteor.isServer) {
     },
     // call the passed allow and deny functions only in case the key is
     // matching the prefix
-    addAllowRule: function (prefix, allowFn) {
+    addAllowRule: function (prefix, allowFnCode) {
+      var allowFn = new Function('userId', 'command', 'args', allowFnCode);
       COLLECTIONS[prefix].allow({ exec: function (userId, command, args) {
         if (args[0].substr(0, prefix.length) === prefix)
           return allowFn.apply(this, arguments);
         return false;
       } });
     },
-    addDenyRule: function (prefix, denyFn) {
+    addDenyRule: function (prefix, denyFnCode) {
+      var denyFn = new Function('userId', 'command', 'args', denyFnCode);
       COLLECTIONS[prefix].deny({ exec: function (userId, command, args) {
         if (args[0].substr(0, prefix.length) === prefix)
           return denyFn.apply(this, arguments);
