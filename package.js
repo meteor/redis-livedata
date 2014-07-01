@@ -74,7 +74,7 @@ Package.on_test(function (api) {
   // XXX test order dependency: the allow_tests "partial allow" test
   // fails if it is run before redis_livedata_tests.
   api.add_files('redis_livedata_tests.js', ['client', 'server']);
-  //api.add_files('allow_tests.js', ['client', 'server']);
+  api.add_files('allow_tests.js', ['client', 'server']);
   //api.add_files('redis_collection_tests.js', ['client', 'server']);
   //api.add_files('observe_changes_tests.js', ['client', 'server']);
   //api.add_files('oplog_tests.js', 'server');

@@ -1,4 +1,4 @@
-if (Meteor.isServer) {
+if (false && Meteor.isServer) {
   // Set up allow/deny rules for test collections
 
   var allowCollections = {};
@@ -217,7 +217,7 @@ if (Meteor.isServer) {
   });
 }
 
-if (Meteor.isClient) {
+if (false && Meteor.isClient) {
   _.each(['STRING', 'MONGO'], function (idGeneration) {
     // Set up a bunch of test collections... on the client! They match the ones
     // created by setUpAllowTestsCollections.
@@ -798,8 +798,17 @@ if (Meteor.isServer) {
     test.throws(function () {
       collection.deny({invalidOption: true});
     });
+    test.throws(function () {
+      collection.deny({insert: true});
+    });
+    test.throws(function () {
+      collection.deny({update: true});
+    });
+    test.throws(function () {
+      collection.deny({remove: true});
+    });
 
-    _.each(['insert', 'update', 'remove', 'fetch'], function (key) {
+    _.each(['exec'], function (key) {
       var options = {};
       options[key] = true;
       test.throws(function () {
@@ -810,7 +819,7 @@ if (Meteor.isServer) {
       });
     });
 
-    _.each(['insert', 'update', 'remove'], function (key) {
+    _.each(['exec'], function (key) {
       var options = {};
       options[key] = ['an array']; // this should be a function, not an array
       test.throws(function () {
@@ -820,17 +829,13 @@ if (Meteor.isServer) {
         collection.deny(options);
       });
     });
-
-    test.throws(function () {
-      collection.allow({fetch: function () {}}); // this should be an array
-    });
   });
 
   Tinytest.add("collection - calling allow restricts", function (test) {
     var collection = new Meteor.RedisCollection(null);
     test.equal(collection._restricted, false);
     collection.allow({
-      insert: function() {}
+      exec: function() {}
     });
     test.equal(collection._restricted, true);
   });
