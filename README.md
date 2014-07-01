@@ -24,7 +24,7 @@ and officially supported version of Redis is 2.8.9.
 To connect to the particular Redis server, pass its url as the `REDIS_URL`
 environment variable to the Meteor server process. It is set to `localhost`.
 
-   env REDIS_URL=123.0.123.0 meteor
+    env REDIS_URL=123.0.123.0 meteor
 
 This package relies on key-space notification system on your Redis server, so
 either set it up from redis-cli:
@@ -43,7 +43,9 @@ You can instantiate the Redis collection either on client or on the server. The
 collection can be either unnamed (unmanaged, just in-memory) or called "redis"
 as Redis doesn't have any concept of namespaced collections.
 
-    R = new Meteor.RedisCollection("redis");
+```javascript
+R = new Meteor.RedisCollection("redis");
+```
 
 The collection wraps the Redis commands and makes them "synchronous" (just
 looking synchronous, but still not blocking the event-loop) if no callback is
@@ -53,9 +55,11 @@ passed or node-style async if one is passed.
 
 One can publish a cursor just like in mongo-livedata:
 
-    Meteor.publish("peter-things", function () {
-      return R.matching("peter-things-*");
-    });
+```javascript
+Meteor.publish("peter-things", function () {
+  return R.matching("peter-things-*");
+});
+```
 
 This way data will be automatically synchronized to all subscribed clients.
 
@@ -68,15 +72,17 @@ client or client's simulations.
 
 Unlike mongo-livedata there is only one type of allow/deny callbacks: `exec`.
 
-    // allow only 'incr' calls on keys starting with 'peter-things-'
-    R.allow({
-      exec: function (userId, command, args) {
-        if (command !== 'incr') return false;
-        if (_.any(args, function (key) { return key.substr(0, 13) !== "peter-things-"; }))
-          return false;
-        return true;
-      }
-    });
+```javascript
+// allow only 'incr' calls on keys starting with 'peter-things-'
+R.allow({
+  exec: function (userId, command, args) {
+    if (command !== 'incr') return false;
+    if (_.any(args, function (key) { return key.substr(0, 13) !== "peter-things-"; }))
+      return false;
+    return true;
+  }
+});
+```
 
 ## Supported commands
 
