@@ -15,6 +15,13 @@ RedisClient = function (url, options) {
   var host = parsedUrl.hostname || '127.0.0.1';
   var port = parseInt(parsedUrl.port || '6379');
 
+  if (parsedUrl.auth) {
+    var auth = parsedUrl.auth;
+    var colon = auth.indexOf(':');
+    // Note that redis doesn't use the username!
+    options.auth_pass = auth.substring(colon + 1);
+  }
+
   self._connection = RedisNpm.createClient(port, host, options);
 };
 
