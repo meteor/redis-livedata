@@ -72,16 +72,21 @@ meteorOnce = function(f) {
 // you're only trying to receive data from a remote DDP server.)
 RedisInternals.defaultRemoteCollectionDriver = meteorOnce(function () {
   var redisUrl = process.env.REDIS_URL;
+  if (!redisUrl) {
+    redisUrl = Meteor.settings.redisUrl;
+  }
+  if (!redisUrl) {
+    redisUrl = 'redis://127.0.0.1:6379';
+    Meteor._debug("Defaulting REDIS_URL to " + redisUrl);
+  }
 
   var connectionOptions = {};
   var configureKeyspaceNotifications = process.env.REDIS_CONFIGURE_KEYSPACE_NOTIFICATIONS;
+  if (!configureKeyspaceNotifications) {
+    configureKeyspaceNotifications = Meteor.settings.redisConfigureKeyspaceNotifications;
+  }
   if (configureKeyspaceNotifications) {
     connectionOptions.configureKeyspaceNotifications = configureKeyspaceNotifications;
-  }
-
-  if (! redisUrl) {
-    redisUrl = 'redis://127.0.0.1:6379';
-    Meteor._debug("Defaulting REDIS_URL to " + redisUrl);
   }
 
   return new RedisInternals.RemoteCollectionDriver(redisUrl, connectionOptions);
