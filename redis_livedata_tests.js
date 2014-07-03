@@ -478,6 +478,7 @@ Tinytest.addAsync("redis-livedata - hash basics, " + nameSuffix, function (test,
   test.equal(coll.hget(keyPrefix + "1", 'f1'), undefined);
   test.equal(coll.hgetall(keyPrefix + "1"), undefined);
 
+  // hset & hget & hgetall
   obs.expectObserve(test, 'a(A)', function () {
     var id = 'A';
     coll.hset(keyPrefix + id, 'f1', 'A1');
@@ -499,11 +500,93 @@ Tinytest.addAsync("redis-livedata - hash basics, " + nameSuffix, function (test,
     coll.hset(keyPrefix + 'A', 'f3', '3');
   });
 
+  // hincrby
   obs.expectObserve(test, 'u(A)', function () {
     test.equal(coll.hget(keyPrefix + 'A', 'f3'), '3');
     coll.hincrby(keyPrefix + 'A', 'f3', 1);
     test.equal(coll.hget(keyPrefix + 'A', 'f3'), '4');
   });
+
+  obs.expectObserve(test, 'u(A)', function () {
+    coll.hincrby(keyPrefix + 'A', 'f3', -4);
+    test.equal(coll.hget(keyPrefix + 'A', 'f3'), '0');
+    test.equal(coll.hgetall(keyPrefix + 'A'), { 'f1': 'A1', 'f2': 'A2', 'f3': '0' });
+  });
+
+  // hincrbyfloat
+  obs.expectObserve(test, 'u(A)', function () {
+    test.equal(coll.hget(keyPrefix + 'A', 'f3'), '0');
+    coll.hincrbyfloat(keyPrefix + 'A', 'f3', 3.0);
+    test.equal(coll.hget(keyPrefix + 'A', 'f3'), '3');
+    test.equal(coll.hgetall(keyPrefix + 'A'), { 'f1': 'A1', 'f2': 'A2', 'f3': '3' });
+  });
+
+  // hdel & hexists & hlen
+  obs.expectObserve(test, 'u(A)', function () {
+    test.equal(coll.hgetall(keyPrefix + 'A'), { 'f1': 'A1', 'f2': 'A2', 'f3': '3' });
+    test.equal(coll.hexists(keyPrefix + 'A', 'f3'), 1);
+    test.equal(coll.hlen(keyPrefix + 'A'), 3);
+
+    test.equal(coll.hdel(keyPrefix + 'A', 'f3'), 1);
+    test.equal(coll.hexists(keyPrefix + 'A', 'f3'), 0);
+    test.equal(coll.hlen(keyPrefix + 'A'), 2);
+    test.equal(coll.hgetall(keyPrefix + 'A'), { 'f1': 'A1', 'f2': 'A2' });
+  });
+
+  obs.expectObserve(test, 'u(A)', function () {
+    test.equal(coll.hgetall(keyPrefix + 'A'), { 'f1': 'A1', 'f2': 'A2' });
+    test.equal(coll.hdel(keyPrefix + 'A', 'f2'), 1);
+    test.equal(coll.hlen(keyPrefix + 'A'), 1);
+    test.equal(coll.hgetall(keyPrefix + 'A'), { 'f1': 'A1' });
+  });
+
+  obs.expectObserve(test, '', function () {
+    test.equal(coll.hdel(keyPrefix + 'A', 'f0'), 0);
+    test.equal(coll.hlen(keyPrefix + 'A'), 1);
+  });
+
+  obs.expectObserve(test, 'r(A)', function () {
+    test.equal(coll.hgetall(keyPrefix + 'A'), { 'f1': 'A1' });
+    test.equal(coll.hdel(keyPrefix + 'A', 'f1'), 1);
+    test.equal(coll.hlen(keyPrefix + 'A'), 0);
+
+    test.equal(coll.hgetall(keyPrefix + 'A'), undefined);
+  });
+
+  // hmset & hsetnx & hmget & hkeys & hvals
+  obs.expectObserve(test, 'a(A)', function () {
+    test.equal(coll.hgetall(keyPrefix + 'A'), undefined);
+    test.equal(coll.hmget(keyPrefix + 'A', 'f1', 'f2', 'f3'), [ null, null, null ]);
+
+    test.equal(coll.hmset(keyPrefix + 'A', 'f1', 'A1', 'f2', 'A2'), 'OK');
+    test.equal(coll.hmget(keyPrefix + 'A', 'f1', 'f2', 'f3'), [ 'A1', 'A2', null ]);
+  });
+
+  obs.expectObserve(test, '', function () {
+    test.equal(coll.hsetnx(keyPrefix + 'A', 'f1', 'XXX'), 0);
+  });
+
+  obs.expectObserve(test, 'u(A)', function () {
+    test.equal(coll.hsetnx(keyPrefix + 'A', 'f3', 'A3'), 1);
+
+    test.equal(coll.hmget(keyPrefix + 'A', 'f1', 'f2', 'f3'), [ 'A1', 'A2', 'A3' ]);
+  });
+
+
+  obs.expectObserve(test, 'u(A)', function () {
+    test.equal(coll.hmset(keyPrefix + 'A', 'f1', '', 'f2', ''), 'OK');
+    test.equal(coll.hmget(keyPrefix + 'A', 'f1', 'f2', 'f3'), [ '', '', 'A3' ]);
+
+    test.equal(coll.hkeys(keyPrefix + 'A'), ['f1', 'f2', 'f3']);
+    test.equal(coll.hvals(keyPrefix + 'A'), ['', '', 'A3']);
+  });
+
+  obs.expectObserve(test, 'u(A)', function () {
+    test.equal(coll.hmset(keyPrefix + 'A', 'f1', 'A1', 'f2', 'A2'), 'OK');
+    test.equal(coll.hkeys(keyPrefix + 'A'), ['f1', 'f2', 'f3']);
+    test.equal(coll.hvals(keyPrefix + 'A'), ['A1', 'A2', 'A3']);
+  });
+
 
   obs.expectObserve(test, 'a(B)', function () {
     var id2 = 'B';
