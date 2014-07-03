@@ -542,7 +542,7 @@ _.extend(KeyspaceNotificationObserveDriver.prototype, {
     }
 
     var opType = op.message;
-    if (_.contains(['del', 'expired', 'hdel'], opType)) {
+    if (_.contains(['del', 'expired'], opType)) {
       if (self._published.has(id)) // || (self._limit && self._unpublishedBuffer.has(id)))
         self._removeMatching(id);
     } else if (_.contains(REDIS_COMMANDS_HASH, opType)
