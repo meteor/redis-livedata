@@ -27,40 +27,43 @@ environment variable to the Meteor server process. It defaults to `localhost:637
     env REDIS_URL=redis://username:password@1.2.3.4:6379 meteor
 
 To provide reactivity, this package uses [Redis Keyspace Notifications](http://redis.io/topics/notifications).  You
-can either set it up from redis-cli:
+need to enable keyspace notifications; you should do this either from redis-cli:
 
     CONFIG SET notify-keyspace-events AKE
 
 or set the `REDIS_CONFIGURE_KEYSPACE_NOTIFICATIONS=1` environment variable for
-your Meteor application server process, and Meteor will configure this for you:
+your Meteor application server process, and the package will then configure this for you:
 
     env REDIS_CONFIGURE_KEYSPACE_NOTIFICATIONS=1 REDIS_URL=... meteor
 
-
 ## RedisCollection
+
+Just like Meteor.Collection with Mongo, you will work with Meteor.RedisCollection for
+Redis data.
 
 You can instantiate a RedisCollection on both client and on the server.  The
 collection can be either unnamed (unmanaged, just in-memory) or must be "redis"
 as Redis doesn't have any concept of namespaced collections.
 
 ```javascript
-R = new Meteor.RedisCollection("redis");
+var redisCollection = new Meteor.RedisCollection("redis");
 ```
 
 The collection wraps the Redis commands.  If a callback is passed then the
 commands execute asynchronously.  If no callback is passed, on the server,
 the call is executed synchronously (technically this uses fibers and only
-appears to be synchronous, though it still does no blocking the event-loop).  If
+appears to be synchronous, so it does not block the event-loop).  If
 you're on the client and don't pass a callback, the call executes asynchronously
 and you won't be notified of the result.
 
 ## Publish/Subscribe
 
-One can publish a cursor just like in mongo-livedata, using 'matching' instead of 'find':
+One can publish a cursor just like in mongo-livedata.  The Redis equivalent of 'find' is 'matching', which
+matches keys using [Redis pattern matching syntax](http://redis.io/commands/keys).
 
 ```javascript
 Meteor.publish("peter-things", function () {
-  return R.matching("peter-things-*");
+  return redisCollection.matching("peter-things-*");
 });
 ```
 
@@ -78,7 +81,7 @@ through one allow/deny callback method: `exec`.
 
 ```javascript
 // allow only 'incr' calls on keys starting with 'peter-things-'
-R.allow({
+redisCollection.allow({
   exec: function (userId, command, args) {
     if (command !== 'incr') return false;
     if (_.any(args, function (key) { return key.substr(0, 13) !== "peter-things-"; }))
@@ -93,6 +96,7 @@ R.allow({
 Right now only commands related to keys and strings are supported (but not
 binary operations). Sets, hashes, ordered sets and other are not currently supported.
 
+Flushall does not currently work, because Redis doesn't send a keyspace notification.
 
 # License
 
