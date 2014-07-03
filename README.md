@@ -3,8 +3,8 @@
 `redis-livedata` is a Meteor unipackage available on
 [Atmosphere](https://atmospherejs.com/package/redis-livedata).
 
-The goal of this package is to bring a full-stack reactivity support for Redis
-in Meteor applications. This includes data-sync, latency compensation combined
+The goal of this package is to bring full-stack reactivity support for Redis
+in Meteor applications. This includes data-sync and latency-compensation, combined
 with Meteor's plug'n'play packaging interface, ease of use and flexible
 permissions system.
 
@@ -15,45 +15,48 @@ Add this package to your Meteor app with meteorite:
 
     mrt add redis-livedata
 
-Since Redis is not shipped with Meteor or this package yet you would need to
-have a running server and a url to connect to it. You can install Redis locally
+Since Redis is not yet shipped with Meteor or this package, you need to
+have a running Redis server and a url to connect to it. You can install Redis locally
 on Mac OS X with homebrew `brew install redis` or by following the
 [instructions](http://redis.io/download) for other platforms. The latest tested
 and officially supported version of Redis is 2.8.9.
 
-To connect to the particular Redis server, pass its url as the `REDIS_URL`
-environment variable to the Meteor server process. It is set to `localhost`.
+To configure the Redis server connection information, pass its url as the `REDIS_URL`
+environment variable to the Meteor server process. It defaults to `localhost:6379`.
 
-    env REDIS_URL=123.0.123.0 meteor
+    env REDIS_URL=redis://username:password@1.2.3.4:6379 meteor
 
-This package relies on key-space notification system on your Redis server, so
-either set it up from redis-cli:
+To provide reactivity, this package uses [Redis Keyspace Notifications](http://redis.io/topics/notifications).  You
+can either set it up from redis-cli:
 
     CONFIG SET notify-keyspace-events AKE
 
 or set the `REDIS_CONFIGURE_KEYSPACE_NOTIFICATIONS=1` environment variable for
-your Meteor application server process and Meteor will set this command for you:
+your Meteor application server process, and Meteor will configure this for you:
 
-    env REDIS_CONFIGURE_KEYSPACE_NOTIFICATIONS=1 REDIS_URL=123.0.123.0 meteor
+    env REDIS_CONFIGURE_KEYSPACE_NOTIFICATIONS=1 REDIS_URL=... meteor
 
 
 ## RedisCollection
 
-You can instantiate the Redis collection either on client or on the server. The
-collection can be either unnamed (unmanaged, just in-memory) or called "redis"
+You can instantiate a RedisCollection on both client and on the server.  The
+collection can be either unnamed (unmanaged, just in-memory) or must be "redis"
 as Redis doesn't have any concept of namespaced collections.
 
 ```javascript
 R = new Meteor.RedisCollection("redis");
 ```
 
-The collection wraps the Redis commands and makes them "synchronous" (just
-looking synchronous, but still not blocking the event-loop) if no callback is
-passed or node-style async if one is passed.
+The collection wraps the Redis commands.  If a callback is passed then the
+commands execute asynchronously.  If no callback is passed, on the server,
+the call is executed synchronously (technically this uses fibers and only
+appears to be synchronous, though it still does no blocking the event-loop).  If
+you're on the client and don't pass a callback, the call executes asynchronously
+and you won't be notified of the result.
 
 ## Publish/Subscribe
 
-One can publish a cursor just like in mongo-livedata:
+One can publish a cursor just like in mongo-livedata, using 'matching' instead of 'find':
 
 ```javascript
 Meteor.publish("peter-things", function () {
@@ -70,7 +73,8 @@ client or client's simulations.
 
 ## Permissions: allow/deny
 
-Unlike mongo-livedata there is only one type of allow/deny callbacks: `exec`.
+Because redis has so many commands, unlike mongo-livedata all commands go
+through one allow/deny callback method: `exec`.
 
 ```javascript
 // allow only 'incr' calls on keys starting with 'peter-things-'
@@ -87,7 +91,7 @@ R.allow({
 ## Supported commands
 
 Right now only commands related to keys and strings are supported (but not
-binary operations). Sets, hashes, ordered sets and other are not supported.
+binary operations). Sets, hashes, ordered sets and other are not currently supported.
 
 
 # License
