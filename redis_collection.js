@@ -483,15 +483,16 @@ Meteor.RedisCollection.prototype.matching = function (pattern) {
 
 _.each(['set', 'setex', 'get', 'append', 'del',
         'incr', 'incrby', 'incrbyfloat', 'decr', 'decrby',
-        'hgetall', 'hmset', 'hincrby', '_keys_hgetall', 'flushall'], function (name) {
+        'flushall'].concat(REDIS_COMMANDS_HASH), function (name) {
   Meteor.RedisCollection.prototype[name] = function (/* arguments */) {
     var self = this;
     var args = _.toArray(arguments);
 
     // if this is a read-only command, run it synchronously against the local
     // cache miniredis.
-    if (_.contains(['get', 'hgetall', '_keys_hgetall'], name))
+    if (_.contains(REDIS_COMMANDS_LOCAL, name)) {
       return self._collection[name].apply(self._collection, args);
+    }
 
     var callback;
 

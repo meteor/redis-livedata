@@ -23,7 +23,7 @@ _.extend(RedisInternals.RemoteCollectionDriver.prototype, {
       _.each(['keys', 'matching', 'get',
               'set', 'setex', 'append', 'del',
               'incr', 'incrby', 'incrbyfloat', 'decr', 'decrby',
-              'hgetall', 'hmset', 'hincrby', '_keys_hgetall', '_observe', 'flushall'],
+              '_observe', 'flushall'].concat(REDIS_COMMANDS_HASH),
         function (m) {
           ret[m] = function (/* args */) {
             var args = _.toArray(arguments);

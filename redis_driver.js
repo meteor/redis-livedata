@@ -281,13 +281,14 @@ function checkConfig(client, fix) {
 
   // We need at least:
   //  $ string events
+  //  h hash events
   //  g generic events (del)
   //  x expired events
   //  e evicted events
   //
   // "A" means "everything"
   if (config.indexOf('A') == -1) {
-    _.each(['$', 'g', 'x', 'e'], function (key) {
+    _.each(['$', 'h', 'g', 'x', 'e'], function (key) {
       if (config.indexOf(key) == -1) {
         missing += key;
       }
@@ -718,7 +719,7 @@ _.each(["insert", "update", "remove", "dropCollection"], function (method) {
   };
 });
 
-_.each(["get", "keys", "hgetall", "_keys_hgetall"], function (method) {
+_.each(REDIS_COMMANDS_LOCAL, function (method) {
   RedisConnection.prototype[method] = function (/* arguments */) {
     var self = this;
     return Meteor._wrapAsync(self._client[method]).apply(self._client, arguments);
@@ -727,7 +728,11 @@ _.each(["get", "keys", "hgetall", "_keys_hgetall"], function (method) {
 
 _.each(["set", "setex", "append", "del",
         "incr", "incrby", "incrbyfloat", "decr", "decrby",
-        "hmset", "hincrby", "flushall"], function (method) {
+        "flushall"].concat(REDIS_COMMANDS_HASH), function (method) {
+  if (_.has(REDIS_COMMANDS_LOCAL, method)) {
+    return;
+  }
+
   RedisConnection.prototype[method] = function (/* arguments */) {
     var self = this;
     return Meteor._wrapAsync(self["_" + method]).apply(self, arguments);

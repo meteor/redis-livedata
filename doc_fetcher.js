@@ -18,7 +18,7 @@ _.extend(DocFetcher.prototype, {
   //
   // You may assume that callback is never called synchronously (and in fact
   // OplogObserveDriver does so).
-  fetch: function (collectionName, id, cacheKey, callback) {
+  fetch: function (collectionName, id, method, cacheKey, callback) {
     var self = this;
 
     check(collectionName, String);
@@ -27,20 +27,23 @@ _.extend(DocFetcher.prototype, {
 
     // If there's already an in-progress fetch for this cache key, yield until
     // it's done and return whatever it returns.
-    if (_.has(self._callbacksForCacheKey, cacheKey)) {
+    if (cacheKey && _.has(self._callbacksForCacheKey, cacheKey)) {
       self._callbacksForCacheKey[cacheKey].push(callback);
       return;
     }
 
-    var callbacks = self._callbacksForCacheKey[cacheKey] = [callback];
+    var callbacks = [callback];
+    if (cacheKey) {
+      self._callbacksForCacheKey[cacheKey] = callbacks;
+    }
 
     Fiber(function () {
       try {
-        Meteor._debug("Doing findOne on " + id);
+        Meteor._debug("Doing " + method + " on " + id);
 //        var doc = self._mongoConnection.findOne(
 //          collectionName, {_id: id}) || null;
         // XXX Rename get to _sync_get
-        var value = self._mongoConnection.get(id) || null;
+        var value = self._mongoConnection[method].apply(self._mongoConnection, [id]) || null;
         var doc;
         if (value) {
           doc = { _id: id, value: value};
@@ -63,7 +66,9 @@ _.extend(DocFetcher.prototype, {
       } finally {
         // XXX consider keeping the doc around for a period of time before
         // removing from the cache
-        delete self._callbacksForCacheKey[cacheKey];
+        if (cacheKey) {
+          delete self._callbacksForCacheKey[cacheKey];
+        }
       }
     }).run();
   }

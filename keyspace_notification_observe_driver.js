@@ -121,11 +121,11 @@ KeyspaceNotificationObserveDriver = function (options) {
 //              self._handleOplogEntrySteadyOrFetching(op);
 //          }
         // All other operators should be handled depending on phase
-        if (self._phase === PHASE.QUERYING)
+        if (self._phase === PHASE.QUERYING) {
           self._handleOplogEntryQuerying(notification);
-        else
+        } else {
           self._handleOplogEntrySteadyOrFetching(notification);
-
+        }
         }));
       }
     ));
@@ -446,13 +446,24 @@ _.extend(KeyspaceNotificationObserveDriver.prototype, {
         var fut = new Future;
         // This loop is safe, because _currentlyFetching will not be updated
         // during this loop (in fact, it is never mutated).
-        self._currentlyFetching.forEach(function (cacheKey, id) {
-          Meteor._debug("Fetch of " + id + " @" + cacheKey);
+        self._currentlyFetching.forEach(function (op, id) {
           waiting++;
 //          var collectionName = self._cursorDescription.collectionName;
           var collectionName = "redis";
+          var cacheKey = '';
+
+          var opType = op.message;
+
+          var getMethodName;
+          if (_.contains(REDIS_COMMANDS_HASH, opType)) {
+            getMethodName = 'hgetall';
+          } else {
+            getMethodName = 'get';
+          }
+          Meteor._debug("Fetch of " + id + " using " + getMethodName);
+
           self._mongoHandle._docFetcher.fetch(
-            collectionName, id, cacheKey,
+            collectionName, id, getMethodName, cacheKey,
             finishIfNeedToPollQuery(function (err, doc) {
               Meteor._debug("Got doc: " + JSON.stringify(doc));
 
@@ -513,7 +524,7 @@ _.extend(KeyspaceNotificationObserveDriver.prototype, {
     var self = this;
 //    self._needToFetch.set(idForOp(op), op.ts.toString());
     // XXX cacheKey
-    self._needToFetch.set(op.id, Random.id());
+    self._needToFetch.set(op.id, op);
   },
   _handleOplogEntrySteadyOrFetching: function (op) {
     Meteor._debug("_handleOplogEntrySteadyOrFetching " + JSON.stringify(arguments));
@@ -526,20 +537,21 @@ _.extend(KeyspaceNotificationObserveDriver.prototype, {
         ((self._currentlyFetching && self._currentlyFetching.has(id)) ||
          self._needToFetch.has(id))) {
    // XXX cacheKey
-      self._needToFetch.set(id, Random.id()); //op.ts.toString());
+      self._needToFetch.set(id, op);
       return;
     }
 
     var opType = op.message;
-    if (opType == 'set' || opType == 'append'
-        || opType == 'incr' || opType == 'incrby' || opType == 'incrbyfloat'
-        || opType == 'decr' || opType == 'decrby') {
-      self._needToFetch.set(id, Random.id()); //op.ts.toString());
-      if (self._phase === PHASE.STEADY)
-        self._fetchModifiedDocuments();
-    } else if (opType == 'del' || opType == 'expired') {
+    if (_.contains(['del', 'expired', 'hdel'], opType)) {
       if (self._published.has(id)) // || (self._limit && self._unpublishedBuffer.has(id)))
         self._removeMatching(id);
+    } else if (_.contains(REDIS_COMMANDS_HASH, opType)
+        || opType == 'set' || opType == 'append'
+        || opType == 'incr' || opType == 'incrby' || opType == 'incrbyfloat'
+        || opType == 'decr' || opType == 'decrby') {
+      self._needToFetch.set(id, op); //op.ts.toString());
+      if (self._phase === PHASE.STEADY)
+        self._fetchModifiedDocuments();
     } else {
       throw Error("XXX UNHANDLED NOTIFICATION TYPE: " + opType);
     }

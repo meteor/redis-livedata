@@ -54,6 +54,7 @@ Package.on_use(function (api) {
   api.export('RedisTest', 'server', {testOnly: true});
 
   api.add_files('sync_map.js', ['client', 'server']);
+  api.add_files('redis_commands.js', ['client', 'server']);
   api.add_files(['redis_driver.js', 'oplog_tailing.js',
                  'observe_multiplex.js', 'doc_fetcher.js',
                  //'polling_observe_driver.js','oplog_observe_driver.js',

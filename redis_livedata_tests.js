@@ -463,6 +463,81 @@ Tinytest.addAsync("redis-livedata - basics, " + nameSuffix, function (test, onCo
   onComplete();
 });
 
+
+Tinytest.addAsync("redis-livedata - hash basics, " + nameSuffix, function (test, onComplete) {
+  var keyPrefix = Random.id() + ':';
+  var coll = new Meteor.RedisCollection(redisCollectionName, collectionOptions);
+
+  if (Meteor.isClient) {
+    Meteor.call("prefixRedisCollection", keyPrefix, { insecure: true });
+  }
+
+  var obs = new ObserveTester(coll, keyPrefix, redisCollectionName);
+
+  test.equal(coll.matching(keyPrefix + '*').count(), 0);
+  test.equal(coll.hget(keyPrefix + "1", 'f1'), undefined);
+  test.equal(coll.hgetall(keyPrefix + "1"), undefined);
+
+  obs.expectObserve(test, 'a(A)', function () {
+    var id = 'A';
+    coll.hset(keyPrefix + id, 'f1', 'A1');
+    test.equal(coll.matching(keyPrefix + '*').count(), 1);
+    test.equal(coll.hget(keyPrefix + id, 'f1'), 'A1');
+    test.equal(coll.hgetall(keyPrefix + id), { 'f1': 'A1' });
+  });
+
+  obs.expectObserve(test, 'u(A)', function () {
+    var id = 'A';
+    coll.hset(keyPrefix + id, 'f2', 'A2');
+    test.equal(coll.matching(keyPrefix + '*').count(), 1);
+    test.equal(coll.hget(keyPrefix + id, 'f1'), 'A1');
+    test.equal(coll.hget(keyPrefix + id, 'f2'), 'A2');
+    test.equal(coll.hgetall(keyPrefix + id), { 'f1': 'A1', 'f2': 'A2' });
+  });
+
+  obs.expectObserve(test, 'u(A)', function () {
+    coll.hset(keyPrefix + 'A', 'f3', '3');
+  });
+
+  obs.expectObserve(test, 'u(A)', function () {
+    test.equal(coll.hget(keyPrefix + 'A', 'f3'), '3');
+    coll.hincrby(keyPrefix + 'A', 'f3', 1);
+    test.equal(coll.hget(keyPrefix + 'A', 'f3'), '4');
+  });
+
+  obs.expectObserve(test, 'a(B)', function () {
+    var id2 = 'B';
+    coll.hset(keyPrefix + id2, 'f1', 'B1');
+    test.equal(coll.matching(keyPrefix + '*').count(), 2);
+    test.equal(coll.matching(keyPrefix + id2).count(), 1);
+    test.equal(coll.hget(keyPrefix + id2, 'f1'), 'B1');
+    test.equal(coll.hget(keyPrefix + id2, 'f2'), undefined);
+  });
+
+  obs.expectObserve(test, 'r(A)', function () {
+    var count = coll.del(keyPrefix + 'A');
+    test.equal(count, 1);
+    test.equal(coll.matching(keyPrefix + '*').count(), 1);
+    test.equal(coll.hget(keyPrefix + 'A', 'f1'), undefined);
+    test.equal(coll.hgetall(keyPrefix + 'A'), undefined);
+  });
+
+  obs.expectObserve(test, 'r(B)', function () {
+    coll.del(keyPrefix + 'B');
+    test.equal(coll.matching(keyPrefix + '*').count(), 0);
+  });
+
+  obs.expectObserve(test, '', function () {
+    var count = coll.del(keyPrefix + 'B');
+    test.equal(count, 0);
+    test.equal(coll.matching(keyPrefix + '*').count(), 0);
+  });
+
+  obs.stop();
+  onComplete();
+});
+
+
 testAsyncMulti('redis-livedata - observe initial results, ' + nameSuffix, [
   function (test, expect) {
     this.keyPrefix = Random.id();

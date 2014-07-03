@@ -98,73 +98,6 @@ RedisClient.prototype.setex = function (key, expiration, value, callback) {
   self._connection.setex(key, expiration, value, Meteor.bindEnvironment(callback));
 };
 
-RedisClient.prototype.hgetall = function (key, callback) {
-  var self = this;
-
-  self._connection.hgetall(key, Meteor.bindEnvironment(function (err, result) {
-    // Mongo returns undefined here, our Redis binding returns null
-    if (result === null) {
-      result = undefined;
-    }
-    callback(err, result);
-  }));
-};
-
-RedisClient.prototype._multi_hgetall = function (keys, callback) {
-  // We need to implement this ourselves, because redis doesn't have a multi-key hgetall
-  var self = this;
-
-  Meteor._debug("_multi_hgetall " + JSON.stringify(arguments));
-
-  var connection = self._connection;
-
-  var errors = [];
-  var lastError = null;
-  var values = [];
-  var replyCount = 0;
-
-  var n = keys.length;
-
-  if (n == 0) {
-    callback(lastError, values);
-    return;
-  }
-
-  _.each(_.range(n), function(i) {
-    var key = keys[i];
-    connection.hgetall(key, Meteor.bindEnvironment(function(err, value) {
-      if (err) {
-        Meteor._debug("Error getting key from redis: " + err);
-        lastError = err;
-      }
-      errors[i] = err;
-      values[i] = value;
-
-      replyCount++;
-      if (replyCount == n) {
-        Meteor._debug("Got n values");
-        callback(lastError, values);
-      }
-    }));
-  });
-};
-
-RedisClient.prototype._keys_hgetall = function (matcher, callback) {
-  var self = this;
-
-  self._connection.keys(matcher, Meteor.bindEnvironment(function (err, result) {
-    if (err) {
-      Meteor._debug("Error listing keys: " + err);
-      callback(err, null);
-    } else {
-      Meteor._debug("matcher = " + matcher);
-      Meteor._debug("keys = " + result.length);
-
-      self._multi_hgetall(result, callback);
-    }
-  }));
-};
-
 RedisClient.prototype.mget = function (keys, callback) {
   var self = this;
 
@@ -196,18 +129,39 @@ RedisClient.prototype.matching = function (pattern, callback) {
   }));
 };
 
+_.each(REDIS_COMMANDS_HASH, function (method) {
+  RedisClient.prototype[method] = function (/* arguments */) {
+    var self = this;
+    var args = _.toArray(arguments);
+    var cb = args.pop();
 
+    if (_.isFunction(cb)) {
+      args.push(Meteor.bindEnvironment(function (err, result) {
+        // Mongo returns undefined here, our Redis binding returns null
+        if (result === null) {
+          result = undefined;
+        }
+        cb(err, result);
+      }));
+    } else {
+      args.push(cb);
+    }
 
-RedisClient.prototype.hmset = function (key, object, callback) {
+    return self._connection[method].apply(self._connection, args);
+  };
+});
+
+// XXX: Remove (in favor of default implementation?)
+RedisClient.prototype.hgetall = function (key, callback) {
   var self = this;
 
-  self._connection.hmset(key, object, Meteor.bindEnvironment(callback));
-};
-
-RedisClient.prototype.hincrby = function (key, field, delta, callback) {
-  var self = this;
-
-  self._connection.hincrby(key, field, delta, Meteor.bindEnvironment(callback));
+  self._connection.hgetall(key, Meteor.bindEnvironment(function (err, result) {
+    // Mongo returns undefined here, our Redis binding returns null
+    if (result === null) {
+      result = undefined;
+    }
+    callback(err, result);
+  }));
 };
 
 RedisClient.prototype.del = function (keys, callback) {
