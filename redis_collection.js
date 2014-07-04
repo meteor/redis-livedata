@@ -491,7 +491,8 @@ _.each(['set', 'setex', 'get', 'append', 'del',
     // if this is a read-only command, and we are on the client, run it
     // synchronously against the local cache miniredis.
     if (_.contains(REDIS_COMMANDS_LOCAL, name)) {
-      return self._collection[name].apply(self._collection, args);
+      if (! self._connection || self._connection !== Meteor.server)
+        return self._collection[name].apply(self._collection, args);
     }
 
     var callback;
