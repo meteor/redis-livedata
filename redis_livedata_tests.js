@@ -556,10 +556,10 @@ Tinytest.addAsync("redis-livedata - hash basics, " + nameSuffix, function (test,
   // hmset & hsetnx & hmget & hkeys & hvals
   obs.expectObserve(test, 'a(A)', function () {
     test.equal(coll.hgetall(keyPrefix + 'A'), undefined);
-    test.equal(coll.hmget(keyPrefix + 'A', 'f1', 'f2', 'f3'), [ null, null, null ]);
+    test.equal(coll.hmget(keyPrefix + 'A', 'f1', 'f2', 'f3'), [ undefined, undefined, undefined ]);
 
     test.equal(coll.hmset(keyPrefix + 'A', 'f1', 'A1', 'f2', 'A2'), 'OK');
-    test.equal(coll.hmget(keyPrefix + 'A', 'f1', 'f2', 'f3'), [ 'A1', 'A2', null ]);
+    test.equal(coll.hmget(keyPrefix + 'A', 'f1', 'f2', 'f3'), [ 'A1', 'A2', undefined ]);
   });
 
   obs.expectObserve(test, '', function () {
