@@ -488,8 +488,8 @@ _.each(['set', 'setex', 'get', 'append', 'del',
     var self = this;
     var args = _.toArray(arguments);
 
-    // if this is a read-only command, run it synchronously against the local
-    // cache miniredis.
+    // if this is a read-only command, and we are on the client, run it
+    // synchronously against the local cache miniredis.
     if (_.contains(REDIS_COMMANDS_LOCAL, name)) {
       return self._collection[name].apply(self._collection, args);
     }
@@ -528,7 +528,7 @@ _.each(['set', 'setex', 'get', 'append', 'del',
     } else {
       // it's my collection.  descend into the collection object
       // and propagate any exception.
-      args.push(callback);
+      if (callback) args.push(callback);
       try {
         // If the user provided a callback and the collection implements this
         // operation asynchronously, then queryRet will be undefined, and the
