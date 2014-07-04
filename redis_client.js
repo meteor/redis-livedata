@@ -138,8 +138,15 @@ _.each(REDIS_COMMANDS_HASH, function (method) {
     if (_.isFunction(cb)) {
       args.push(Meteor.bindEnvironment(function (err, result) {
         // Mongo returns undefined here, our Redis binding returns null
+        // XXX remove this when we change our mind back to null.
         if (result === null) {
           result = undefined;
+        }
+        // sometimes the result is a vector of values (like multiple hmget)
+        if (_.isArray(result)) {
+          result = _.map(result, function (value) {
+            return value === null ? undefined : value;
+          });
         }
         cb(err, result);
       }));
@@ -147,7 +154,12 @@ _.each(REDIS_COMMANDS_HASH, function (method) {
       args.push(cb);
     }
 
-    return self._connection[method].apply(self._connection, args);
+    var ret = self._connection[method].apply(self._connection, args);
+    // Replace null with undefined as redis npm client likes to return null
+    // when the value is absent. To be consistent with other behavior we
+    // prefer undefined as absence of value.
+    // XXX remove this when we change our mind back to null.
+    return ret === null ? undefined : ret;
   };
 });
 
