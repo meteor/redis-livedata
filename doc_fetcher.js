@@ -44,8 +44,13 @@ _.extend(DocFetcher.prototype, {
 //          collectionName, {_id: id}) || null;
         // XXX Rename get to _sync_get
         var value = self._mongoConnection[method].apply(self._mongoConnection, [id]) || null;
+
         var doc;
         if (value) {
+          // XXX a hack to always box the value into Miniredis.Hash
+          if (method === 'hgetall') {
+            value = new Miniredis.Hash(value);
+          }
           doc = { _id: id, value: value};
         }
         // Return doc to all relevant callbacks. Note that this array can
