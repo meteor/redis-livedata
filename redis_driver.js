@@ -858,8 +858,8 @@ RedisConnection.prototype._dropIndex = function (collectionName, index) {
 // There are two "observe drivers" which drive ObserveMultiplexers:
 //   - PollingObserveDriver caches the results of a query and reruns it when
 //     necessary.
-//   - OplogObserveDriver follows the Mongo operation log to directly observe
-//     database changes.
+//   - KeyspaceNotificationObserveDriver uses redis keyspace notifications to
+//     directly observe database changes.
 // Both implementations follow the same simple interface: when you create them,
 // they start sending observeChanges callbacks (and a ready() invocation) to
 // their ObserveMultiplexer, and you stop them by calling their stop() method.
