@@ -55,7 +55,6 @@ Package.on_use(function (api) {
   api.add_files('redis_commands.js', ['client', 'server']);
   api.add_files(['redis_driver.js', 'oplog_tailing.js',
                  'observe_multiplex.js', 'doc_fetcher.js',
-                 //'polling_observe_driver.js','oplog_observe_driver.js',
                  'keyspace_notification_observe_driver.js',
                  'redis_client.js',
                  'redis_watcher.js'],

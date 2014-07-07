@@ -21,9 +21,9 @@ var finishIfNeedToPollQuery = function (f) {
   };
 };
 
-// OplogObserveDriver is an alternative to PollingObserveDriver which follows
-// the Mongo operation log instead of just re-polling the query. It obeys the
-// same simple interface: constructing it starts sending observeChanges
+// KeyspaceNotificationObserveDriver uses Redis keyspace notifications
+// to detect DB changes, cf the mongo_livedata Oplog Observe Driver.
+// It obeys the same interface: constructing it starts sending observeChanges
 // callbacks (and a ready() invocation) to the ObserveMultiplexer, and you stop
 // it by calling the stop() method.
 KeyspaceNotificationObserveDriver = function (options) {
