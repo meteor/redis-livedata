@@ -711,7 +711,7 @@ testAsyncMulti('redis-livedata - multiple publish, ' + nameSuffix, [
 
     var coll = this.coll;
     var keyPrefix = this.keyPrefix;
-    coll.set(keyPrefix + '0sjsj');
+    coll.set(keyPrefix + '0sjsj', '0sjsj');
     coll.set(keyPrefix + '1asdf', '1asdf', expect(undefined, 'OK'));
     coll.set(keyPrefix + '2fdsa', '2fdsa', expect(undefined, 'OK'));
   }, function (test, expect) {
@@ -743,8 +743,7 @@ testAsyncMulti('redis-livedata - multiple publish, ' + nameSuffix, [
     };
 
     finishObserve(function () {
-      test.equal(output, [{added: keyPrefix + '1asdf'}]);
-      test.equal(output, [{added: keyPrefix + '2fdsa'}]);
+      test.equal(output, [{added: keyPrefix + '1asdf'}, {added: keyPrefix + '2fdsa'}]);
     });
   }
 ]);
