@@ -94,9 +94,18 @@ redisCollection.allow({
 ## Supported commands
 
 Right now only commands related to keys and strings are supported (but not
-binary operations). Sets, hashes, ordered sets and other are not currently supported.
+binary operations) and Hashes. Sets, ordered sets and other are not currently
+supported.
 
 Flushall does not currently work, because Redis doesn't send a keyspace notification.
+
+## Known Issues
+
+Right now it is known that the following things don't work:
+
+- publishing an array of cursors (create several separate publishes instead)
+- flushall is not noticed
+- no support for sets, ordered sets, lists, hyperloglog, etc
 
 # License
 
