@@ -39,7 +39,6 @@ _.extend(DocFetcher.prototype, {
 
     Fiber(function () {
       try {
-        Meteor._debug("Doing " + method + " on " + id);
 //        var doc = self._mongoConnection.findOne(
 //          collectionName, {_id: id}) || null;
         // XXX Rename get to _sync_get

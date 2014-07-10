@@ -166,7 +166,6 @@ _.extend(OplogHandle.prototype, {
       }
     );
     self._sequenceSent++;
-    Meteor._debug("Sent sequence key: " + seq);
     return seq;
   },
   _gotSequenceKey: function(message) {
@@ -179,13 +178,10 @@ _.extend(OplogHandle.prototype, {
 
     self._sequenceSeen++;
 
-    Meteor._debug("Got sequence key: " + self._sequenceSeen);
-
     var ts = self._sequenceSeen;
     // Now that we've processed this operation, process pending sequencers.
     while (!_.isEmpty(self._catchingUpFutures)
       && (self._catchingUpFutures[0].ts <= ts)) {
-      Meteor._debug("Firing caught up...");
       var sequencer = self._catchingUpFutures.shift();
       sequencer.future.return();
     }
@@ -243,7 +239,6 @@ _.extend(OplogHandle.prototype, {
     self._sequenceKey = "__meteor_sequence_" + Random.id() + "__";
 
     self._tailHandle = self._watcher.addListener(function (key, message) {
-      Meteor._debug("Redis keyspace event: " + key + ": " + message);
       if (key == self._sequenceKey) {
         self._gotSequenceKey(message);
         return;

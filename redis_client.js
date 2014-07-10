@@ -29,7 +29,6 @@ RedisClient.prototype.subscribeKeyspaceEvents = function (callback, listener) {
   var self = this;
 
   self._connection.on("pmessage", function (pattern, channel, message) {
-    Meteor._debug("Redis ("+  pattern +")" + " notification: " + channel + ": " + message);
     var colonIndex = channel.indexOf(":");
     if (channel.indexOf("__keyspace@") != 0 || colonIndex == 0) {
       Meteor._debug("Unrecognized channel: " + channel);
@@ -45,8 +44,6 @@ RedisClient.prototype.subscribeKeyspaceEvents = function (callback, listener) {
 RedisClient.prototype.publish = function (channel, message, callback) {
   var self = this;
 
-  Meteor._debug("Redis command: PUBLISH " + channel + " " + message);
-
   self._connection.publish(channel, message, Meteor.bindEnvironment(callback));
 };
 
@@ -58,12 +55,10 @@ RedisClient.prototype.findCandidateKeys = function (collectionName, matcher, cal
   var simpleKeys = null;
   if (!matcher._hasGeoQuery && !matcher._hasWhere && matcher._isSimple) {
     var keys = _.keys(matcher._selector);
-    Meteor._debug("keys: " + keys);
     if (keys.length == 1 && keys[0] === "_id") {
       var selectorId = matcher._selector._id;
       if (typeof selectorId === 'string') {
         simpleKeys = [collectionName + "//" + selectorId];
-        Meteor._debug("Detected simple id query: " + simpleKeys);
       }
     }
   }
@@ -84,24 +79,16 @@ RedisClient.prototype.keys = function (pattern, callback) {
 RedisClient.prototype.flushall = function (callback) {
   var self = this;
 
-  Meteor._debug("Redis command: FLUSHALL");
-
   self._connection.flushall(Meteor.bindEnvironment(callback));
 };
 
 RedisClient.prototype.setex = function (key, expiration, value, callback) {
   var self = this;
-
-  Meteor._debug("Redis command: SETEX " + key + " " + expiration + " " + value);
-
-
   self._connection.setex(key, expiration, value, Meteor.bindEnvironment(callback));
 };
 
 RedisClient.prototype.mget = function (keys, callback) {
   var self = this;
-
-  Meteor._debug("RedisClient::mget " + JSON.stringify(keys));
 
   if (!keys.length) {
     // mget is fussy about empty keys array
@@ -121,9 +108,6 @@ RedisClient.prototype.matching = function (pattern, callback) {
       Meteor._debug("Error listing keys: " + err);
       callback(err, null);
     } else {
-      Meteor._debug("pattern = " + pattern);
-      Meteor._debug("keys = " + result.length);
-
       self.mget(result, callback);
     }
   }));

@@ -105,7 +105,6 @@ KeyspaceNotificationObserveDriver = function (options) {
   forEachTrigger(self._cursorDescription, function (trigger) {
     self._stopHandles.push(self._mongoHandle._oplogHandle.onOplogEntry(
       trigger, function (notification) {
-        Meteor._debug("keyspace_notification_observe_driver notifcation " + JSON.stringify(notification));
         Meteor._noYieldsAllowed(finishIfNeedToPollQuery(function () {
 //          var op = notification.op;
 //          if (notification.dropCollection) {
@@ -429,8 +428,6 @@ _.extend(KeyspaceNotificationObserveDriver.prototype, {
   _fetchModifiedDocuments: function () {
     var self = this;
 
-    console.log("_fetchModifiedDocuments", self._needToFetch._map);
-
     self._registerPhaseChange(PHASE.FETCHING);
     // Defer, because nothing called from the oplog entry handler may yield, but
     // fetch() yields.
@@ -460,17 +457,13 @@ _.extend(KeyspaceNotificationObserveDriver.prototype, {
           } else {
             getMethodName = 'get';
           }
-          Meteor._debug("Fetch of " + id + " using " + getMethodName);
 
           self._mongoHandle._docFetcher.fetch(
             collectionName, id, getMethodName, cacheKey,
             finishIfNeedToPollQuery(function (err, doc) {
-              Meteor._debug("Got doc: " + JSON.stringify(doc));
 
               try {
                 if (err) {
-                  Meteor._debug("Got exception while fetching documents: " +
-                                err);
                   // If we get an error from the fetcher (eg, trouble connecting
                   // to Mongo), let's just abandon the fetch phase altogether
                   // and fall back to polling. It's not like we're getting live
@@ -520,14 +513,12 @@ _.extend(KeyspaceNotificationObserveDriver.prototype, {
     });
   },
   _handleOplogEntryQuerying: function (op) {
-    Meteor._debug("_handleOplogEntryQuerying " + JSON.stringify(arguments));
     var self = this;
 //    self._needToFetch.set(idForOp(op), op.ts.toString());
     // XXX cacheKey
     self._needToFetch.set(op.id, op);
   },
   _handleOplogEntrySteadyOrFetching: function (op) {
-    Meteor._debug("_handleOplogEntrySteadyOrFetching " + JSON.stringify(arguments));
     var self = this;
     //var id = idForOp(op);
     var id = op.id;
@@ -625,7 +616,6 @@ _.extend(KeyspaceNotificationObserveDriver.prototype, {
     try {
     self._doneQuerying();
     } catch (e) {
-      Meteor._debug("Error in _doneQuerying", e);
       throw e;
     }
   },
@@ -647,7 +637,6 @@ _.extend(KeyspaceNotificationObserveDriver.prototype, {
   _pollQuery: function () {
     var self = this;
 
-    Meteor._debug("XXXXXX _pollQuery");
 
     if (self._stopped)
       return;
@@ -689,20 +678,15 @@ _.extend(KeyspaceNotificationObserveDriver.prototype, {
 
       var pattern = self._cursorDescription.pattern;
 
-      Meteor._debug("Running initial query for " + pattern);
-
       var client = self._mongoHandle._client;
 
       try {
         var keysFuture = new Future();
         client.keys(pattern, keysFuture.resolver());
         var keys = keysFuture.wait();
-        Meteor._debug("Got initial keys " + keys);
-
         var valuesFuture = new Future();
         client.mget(keys, valuesFuture.resolver());
         var values = valuesFuture.wait();
-        Meteor._debug("Got initial values " + values);
 
         for (var i = 0; i < keys.length; i++) {
           newResults.set(keys[i], values[i]);
@@ -721,7 +705,6 @@ _.extend(KeyspaceNotificationObserveDriver.prototype, {
       } catch (e) {
         // During failover (eg) if we get an exception we should log and retry
         // instead of crashing.
-        Meteor._debug("Got exception while polling query: ", e.stack);
         Meteor._sleepForMs(100);
       }
     }
@@ -761,33 +744,24 @@ _.extend(KeyspaceNotificationObserveDriver.prototype, {
   _doneQuerying: function () {
     var self = this;
 
-    console.log("_doneQuerying");
-
     if (self._stopped) {
-      console.log("stopped");
-  return;
+      return;
     }
     self._mongoHandle._oplogHandle.waitUntilCaughtUp();
-    console.log("caught up");
 
     if (self._stopped) {
-      Meteor._debug(" _doneQuerying is stopped");
       return;
     }
     if (self._phase !== PHASE.QUERYING) {
-      Meteor._debug("Phase unexpectedly " + self._phase);
       throw Error("Phase unexpectedly " + self._phase);
     }
 
     if (self._requeryWhenDoneThisQuery) {
-      Meteor._debug("_requeryWhenDoneThisQuery");
       self._requeryWhenDoneThisQuery = false;
       self._pollQuery();
     } else if (self._needToFetch.empty()) {
-      Meteor._debug("_beSteady");
       self._beSteady();
     } else {
-      Meteor._debug("_fetchModifiedDocuments");
       self._fetchModifiedDocuments();
     }
   },
@@ -907,7 +881,6 @@ _.extend(KeyspaceNotificationObserveDriver.prototype, {
     var self = this;
     var now = new Date;
 
-    Meteor._debug("Phase change: " + self._phase + " -> " + phase);
     if (self._phase) {
       var timeDiff = now - self._phaseStartTime;
       Package.facts && Package.facts.Facts.incrementServerFact(

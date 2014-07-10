@@ -298,7 +298,6 @@ function checkConfig(client, fix) {
   if (missing) {
     if (fix) {
       var newConfig = config + missing;
-      Meteor._debug("Setting redis notify-keyspace-events to '" + newConfig + "'");
       Future.wrap(_.bind(client.setConfig, client))('notify-keyspace-events', newConfig).wait();
 
       // Sanity check!
@@ -1202,8 +1201,6 @@ RedisConnection.prototype._observeChanges = function (cursorDescription, callbac
 
   var observeKey = JSON.stringify(
     _.extend({ /*ordered: ordered */}, cursorDescription));
-
-  Meteor._debug("observeKey: " + JSON.stringify(observeKey));
 
   var multiplexer, observeDriver;
   var firstHandle = false;
