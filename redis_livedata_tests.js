@@ -33,37 +33,6 @@ if (Meteor.isServer) {
 
       COLLECTIONS[prefix] = c;
     },
-    prefixRedisCollectionMulti: function (prefix, creationOptions) {
-      creationOptions = creationOptions || {};
-
-      check(prefix, String);
-      check(creationOptions, {
-        insecure: Match.Optional(Boolean),
-        publishName: Match.Optional(Match.OneOf(String, null))
-      });
-
-      var c = new Meteor.RedisCollection("redis");
-
-      var publishName = 'c-' + prefix;
-      if (_.has(creationOptions, 'publishName')) {
-        publishName = creationOptions.publishName;
-      }
-      Meteor.publish(publishName, function () {
-        var cursor1 = c.matching(prefix + "1*");
-        var cursor2 = c.matching(prefix + "2*");
-        return [cursor1, cursor2];
-      });
-
-      if (creationOptions.insecure) {
-        c.allow({ exec: function (userId, command, args) {
-          if (args[0].substr(0, prefix.length) === prefix)
-            return true;
-          return false;
-        } });
-      }
-
-      COLLECTIONS[prefix] = c;
-    },
     // call the passed allow and deny functions only in case the key is
     // matching the prefix
     addAllowRule: function (prefix, allowFnCode) {
@@ -698,56 +667,6 @@ testAsyncMulti('redis-livedata - observe initial results, ' + nameSuffix, [
     });
   }
 ]);
-
-testAsyncMulti('redis-livedata - multiple publish, ' + nameSuffix, [
-  function (test, expect) {
-    this.keyPrefix = Random.id();
-    this.collectionName = redisCollectionName;
-    if (Meteor.isClient && !anonymous) {
-      Meteor.call("prefixRedisCollectionMulti", this.keyPrefix, { insecure: true });
-      Meteor.subscribe('c-' + this.keyPrefix, expect());
-    }
-    this.coll = new Meteor.RedisCollection(this.collectionName, collectionOptions);
-
-    var coll = this.coll;
-    var keyPrefix = this.keyPrefix;
-    coll.set(keyPrefix + '0sjsj', '0sjsj');
-    coll.set(keyPrefix + '1asdf', '1asdf', expect(undefined, 'OK'));
-    coll.set(keyPrefix + '2fdsa', '2fdsa', expect(undefined, 'OK'));
-  }, function (test, expect) {
-    var coll = this.coll;
-    var keyPrefix = this.keyPrefix;
-
-    var output = [];
-
-    var handle = coll.matching(keyPrefix + '*').observeChanges({
-      added: function (key, value) {
-        output.push({added: key});
-      },
-      changed: function (key, value) {
-        output.push('updated');
-      },
-      removed: function (key, value) {
-        output.push('removed');
-      }
-    });
-
-    var finishObserve = function (f) {
-      if (Meteor.isClient) {
-        f();
-      } else {
-        var fence = new DDPServer._WriteFence;
-        DDPServer._CurrentWriteFence.withValue(fence, f);
-        fence.armAndWait();
-      }
-    };
-
-    finishObserve(function () {
-      test.equal(output, [{added: keyPrefix + '1asdf'}, {added: keyPrefix + '2fdsa'}]);
-    });
-  }
-]);
-
 
 if (Meteor.isClient && !anonymous) {
 testAsyncMulti('redis-livedata - anonymous / universal publishes, ' + nameSuffix, [
