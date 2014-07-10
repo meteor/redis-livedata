@@ -40,6 +40,12 @@ _.extend(RedisInternals.RemoteCollectionDriver.prototype, {
               args.push(cb);
             }
 
+            // XXX 'matching' method is a special case, because it returns a
+            // cursor and cursors need to know what collection they belong to.
+            if (m === 'matching') {
+              args = [name].concat(args);
+            }
+
             return self.connection[m].apply(self.connection, args);
           };
         });

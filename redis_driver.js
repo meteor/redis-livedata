@@ -792,11 +792,11 @@ RedisConnection.prototype.findOne = function (collection_name, selector,
   throw new Error("not part of redis api");
 };
 
-RedisConnection.prototype.matching = function (pattern) {
+RedisConnection.prototype.matching = function (collectionName, pattern) {
   var self = this;
 
   return new Cursor(
-    self, new CursorDescription(pattern));
+    self, new CursorDescription(collectionName, pattern));
 };
 
 RedisConnection.prototype._observe = function (observer) {
@@ -861,8 +861,9 @@ RedisConnection.prototype._dropIndex = function (collectionName, index) {
 // they start sending observeChanges callbacks (and a ready() invocation) to
 // their ObserveMultiplexer, and you stop them by calling their stop() method.
 
-CursorDescription = function (pattern) {
+CursorDescription = function (collectionName, pattern) {
   var self = this;
+  self.collectionName = collectionName;
   self.pattern = pattern;
   self.options = {};
 };
