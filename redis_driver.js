@@ -775,23 +775,6 @@ _.each(["set", "setex", "append", "del",
   };
 });
 
-// XXX RedisConnection.upsert() does not return the id of the inserted document
-// unless you set it explicitly in the selector or modifier (as a replacement
-// doc).
-RedisConnection.prototype.upsert = function (collectionName, selector, mod,
-                                             options, callback) {
-  throw new Error("not part of redis api");
-};
-
-RedisConnection.prototype.find = function (collectionName, selector, options) {
-  throw new Error("not part of redis api");
-};
-
-RedisConnection.prototype.findOne = function (collection_name, selector,
-                                              options) {
-  throw new Error("not part of redis api");
-};
-
 RedisConnection.prototype.matching = function (collectionName, pattern) {
   var self = this;
 
@@ -1124,66 +1107,6 @@ _.extend(SynchronousCursor.prototype, {
     }
   }
 });
-
-RedisConnection.prototype.tail = function (cursorDescription, docCallback) {
-  var self = this;
-  if (!cursorDescription.options.tailable)
-    throw new Error("Can only tail a tailable cursor");
-
-  var cursor = self._createSynchronousCursor(cursorDescription);
-
-  var stopped = false;
-  var lastTS = undefined;
-  var loop = function () {
-    while (true) {
-      if (stopped)
-        return;
-      try {
-        var doc = cursor._nextObject();
-      } catch (err) {
-        // There's no good way to figure out if this was actually an error
-        // from Mongo. Ah well. But either way, we need to retry the cursor
-        // (unless the failure was because the observe got stopped).
-        doc = null;
-      }
-      // Since cursor._nextObject can yield, we need to check again to see if
-      // we've been stopped before calling the callback.
-      if (stopped)
-        return;
-      if (doc) {
-        // If a tailable cursor contains a "ts" field, use it to recreate the
-        // cursor on error. ("ts" is a standard that Mongo uses internally for
-        // the oplog, and there's a special flag that lets you do binary search
-        // on it instead of needing to use an index.)
-        lastTS = doc.ts;
-        docCallback(doc);
-      } else {
-        var newSelector = _.clone(cursorDescription.selector);
-        if (lastTS) {
-          newSelector.ts = {$gt: lastTS};
-        }
-        cursor = self._createSynchronousCursor(new CursorDescription(
-          cursorDescription.collectionName,
-          newSelector,
-          cursorDescription.options));
-        // Mongo failover takes many seconds.  Retry in a bit.  (Without this
-        // setTimeout, we peg the CPU at 100% and never notice the actual
-        // failover.
-        Meteor.setTimeout(loop, 100);
-        break;
-      }
-    }
-  };
-
-  Meteor.defer(loop);
-
-  return {
-    stop: function () {
-      stopped = true;
-      cursor.close();
-    }
-  };
-};
 
 RedisConnection.prototype._observeChanges = function (cursorDescription, callbacks) {
   var self = this;
