@@ -6,7 +6,7 @@ LocalCollectionDriver = function () {
 
 var ensureCollection = function (store, name, collections) {
   if (!(name in collections))
-    collections[name] = new Miniredis.RedisStore();
+    collections[name] = new Miniredis.RedisStore(name);
   return collections[name];
 };
 
@@ -18,12 +18,12 @@ _.extend(LocalCollectionDriver.prototype, {
     if (conn) {
       store = conn._redis_store;
       if (!store) {
-        store = conn._redis_store = new Miniredis.RedisStore();
+        store = conn._redis_store = new Miniredis.RedisStore(name);
       }
     } else {
       store = self.noConnStore;
       if (!store) {
-        store = self.noConnStore = new Miniredis.RedisStore();
+        store = self.noConnStore = new Miniredis.RedisStore(name);
       }
     }
     if (! conn) {
