@@ -9,7 +9,9 @@
 
 Package.describe({
   summary: "Adaptor for using Redis and Miniredis over DDP",
-  internal: true
+  version: "1.0.0",
+  name: "slava:redis-livedata",
+  git: "https://github.com/meteor/redis-livedata"
 });
 
 Npm.depends({
@@ -17,10 +19,12 @@ Npm.depends({
 });
 
 Package.on_use(function (api) {
-  api.use(['random', 'ejson', 'json', 'underscore', 'miniredis', 'logging',
-           'livedata', 'deps', 'application-configuration', 'id-map'],
+  api.versionsFrom('0.9.2.2');
+  api.use(['random', 'ejson', 'json', 'underscore', 'logging', 'check',
+           'livedata', 'tracker', 'application-configuration', 'id-map'],
           ['client', 'server']);
-  api.use('check', ['client', 'server']);
+
+  api.use('slava:miniredis@1.0.0', ['client', 'server']);
 
   // Binary Heap data structure is used to optimize oplog observe driver
   // performance.
@@ -65,7 +69,7 @@ Package.on_use(function (api) {
 });
 
 Package.on_test(function (api) {
-  api.use('redis-livedata');
+  api.use('slava:redis-livedata');
   api.use('check');
   api.use(['tinytest', 'underscore', 'test-helpers', 'ejson', 'random',
            'livedata']);
