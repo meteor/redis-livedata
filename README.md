@@ -11,9 +11,9 @@ permissions system.
 
 ## Installation
 
-Add this package to your Meteor app with meteorite:
+Add this package to your Meteor app:
 
-    mrt add redis-livedata
+    meteor add slava:redis-livedata
 
 Since Redis is not yet shipped with Meteor or this package, you need to
 have a running Redis server and a url to connect to it. You can install Redis locally
