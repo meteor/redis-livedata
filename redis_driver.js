@@ -721,7 +721,7 @@ _.each(["insert", "update", "remove", "dropCollection"], function (method) {
 _.each(REDIS_COMMANDS_LOCAL, function (method) {
   RedisConnection.prototype[method] = function (/* arguments */) {
     var self = this;
-    return Meteor._wrapAsync(self._client[method]).apply(self._client, arguments);
+    return (Meteor.wrapAsync || Meteor._wrapAsync)(self._client[method]).apply(self._client, arguments);
   };
 });
 
@@ -734,7 +734,7 @@ _.each(["set", "setex", "append", "del",
 
   RedisConnection.prototype[method] = function (/* arguments */) {
     var self = this;
-    return Meteor._wrapAsync(self["_" + method]).apply(self, arguments);
+    return (Meteor.wrapAsync || Meteor._wrapAsync)(self["_" + method]).apply(self, arguments);
   };
 
   RedisConnection.prototype["_" + method] = function (key /*, arguments */) {
