@@ -21,7 +21,7 @@ Npm.depends({
 Package.on_use(function (api) {
   api.versionsFrom('0.9.2.2');
   api.use(['random', 'ejson', 'json', 'underscore', 'logging', 'check',
-           'livedata', 'tracker', 'application-configuration', 'id-map'],
+           'livedata', 'tracker', 'id-map'],
           ['client', 'server']);
 
   api.use('slava:miniredis@1.0.0', ['client', 'server']);
