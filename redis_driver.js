@@ -1073,7 +1073,7 @@ _.extend(SynchronousCursor.prototype, {
 
     self._pos = -1;
 
-    self._visitedIds = new LocalCollection._IdMap;
+    self._visitedIds = new IdMap;
   },
 
   // No-op since we don't actually have a connection to the database.
@@ -1096,7 +1096,7 @@ _.extend(SynchronousCursor.prototype, {
     if (ordered) {
       return self.fetch();
     } else {
-      var results = new LocalCollection._IdMap;
+      var results = new IdMap;
       self.forEach(function (doc) {
         results.set(doc._id, doc);
       });
