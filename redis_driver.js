@@ -1071,18 +1071,13 @@ _.extend(SynchronousCursor.prototype, {
   rewind: function () {
     var self = this;
 
-    // known to be synchronous
-    self._dbCursor.rewind();
+    self._pos = -1;
 
-    self._visitedIds = new LocalCollection._IdMap;
+    self._visitedIds = new IdMap;
   },
 
-  // Mostly usable for tailable cursors.
-  close: function () {
-    var self = this;
-
-    self._dbCursor.close();
-  },
+  // No-op since we don't actually have a connection to the database.
+  close: function () {},
 
   fetch: function () {
     var self = this;
@@ -1101,7 +1096,7 @@ _.extend(SynchronousCursor.prototype, {
     if (ordered) {
       return self.fetch();
     } else {
-      var results = new LocalCollection._IdMap;
+      var results = new IdMap;
       self.forEach(function (doc) {
         results.set(doc._id, doc);
       });
