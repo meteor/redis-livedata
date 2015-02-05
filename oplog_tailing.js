@@ -236,13 +236,20 @@ _.extend(OplogHandle.prototype, {
     self._sequenceAcked = 0;
     self._sequenceSeen = 0;
     // We need a unique key so we can have multiple Meteor servers
-    self._sequenceKey = "__meteor_sequence_" + Random.id() + "__";
+    var sequencePrefix = "__meteor_sequence_";
+    self._sequenceKey = sequencePrefix + Random.id() + "__";
 
     self._tailHandle = self._watcher.addListener(function (key, message) {
-      if (key == self._sequenceKey) {
-        self._gotSequenceKey(message);
+      // Observe our sequence keys, making sure to trap other servers' keys too so they're
+      // not published as keyspace operations.
+      if (key.indexOf(sequencePrefix) === 0) {
+        if (key === self._sequenceKey) {
+          self._gotSequenceKey(message);
+        }
         return;
       }
+
+      // Other events are keyspace operations.
       // XXX collection name
       var trigger = {collection: "redis",
                      id: key,
