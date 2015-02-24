@@ -171,12 +171,17 @@ _.extend(OplogHandle.prototype, {
   _gotSequenceKey: function(message) {
     var self = this;
 
-    if (message != ("sequence_" + (self._sequenceSeen + 1))) {
+    var messageTs = message.split("_")[1];  // Messages are like "sequence_1377".
+
+    // Only balk if we see a sequence that is less than the latest we've seen
+    // --Redis does not guarantee delivery of keyspace notifications but it
+    // should deliver them in order.
+    if (messageTs < (self._sequenceSeen + 1)) {
       Meteor._debug("Got out-of-sequence message: " + message + " vs " + (self._sequenceSeen + 1));
       throw new Error("Sequence received out of sequence");
     }
 
-    self._sequenceSeen++;
+    self._sequenceSeen = messageTs;
 
     var ts = self._sequenceSeen;
     // Now that we've processed this operation, process pending sequencers.
