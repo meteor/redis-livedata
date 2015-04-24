@@ -265,6 +265,16 @@ RedisConnection = function (url, options) {
 
 // Help the user, by verifying that notify-keyspace-events is set correctly
 function checkConfig(client, fix) {
+
+  // Figure out if we are on Amazon Elasticache, which does not support CONFIG
+  // and other commands: http://docs.aws.amazon.com/AmazonElastiCache/latest/UserGuide/ClientConfig.html
+  var notifyInfo = Future.wrap(_.bind(client.info, client))().wait();
+
+  if (notifyInfo.search('os:Amazon ElastiCache')>0) {
+    Meteor._debug("Remember to configure notify-keyspace-events via Amazon GUI/API for ElastiCache");
+    return;
+  }
+
   var notifyConfig = Future.wrap(_.bind(client.getConfig, client))('notify-keyspace-events').wait();
   var config = '';
   var missing = '';
