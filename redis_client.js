@@ -82,6 +82,12 @@ RedisClient.prototype.flushall = function (callback) {
   self._connection.flushall(Meteor.bindEnvironment(callback));
 };
 
+RedisClient.prototype.info = function (callback) {
+  var self = this;
+
+  self._connection.info(Meteor.bindEnvironment(callback));
+};
+
 RedisClient.prototype.setex = function (key, expiration, value, callback) {
   var self = this;
   self._connection.setex(key, expiration, value, Meteor.bindEnvironment(callback));
