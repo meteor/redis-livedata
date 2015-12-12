@@ -533,13 +533,13 @@ _.extend(KeyspaceNotificationObserveDriver.prototype, {
     }
 
     var opType = op.message;
-    if (_.contains(['del', 'expired'], opType)) {
+    if (_.contains(['del', 'expired', 'rename_from'], opType)) {
       if (self._published.has(id)) // || (self._limit && self._unpublishedBuffer.has(id)))
         self._removeMatching(id);
     } else if (_.contains(REDIS_COMMANDS_HASH, opType)
         || opType == 'set' || opType == 'append'
         || opType == 'incr' || opType == 'incrby' || opType == 'incrbyfloat'
-        || opType == 'decr' || opType == 'decrby') {
+        || opType == 'decr' || opType == 'decrby' || opType == "rename_to") {
       self._needToFetch.set(id, op); //op.ts.toString());
       if (self._phase === PHASE.STEADY)
         self._fetchModifiedDocuments();
