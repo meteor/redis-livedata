@@ -1,4 +1,5 @@
 # Redis Livedata
+[![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/meteor/redis-livedata?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 `redis-livedata` is a Meteor unipackage available on
 [Atmosphere](https://atmospherejs.com/package/redis-livedata).
